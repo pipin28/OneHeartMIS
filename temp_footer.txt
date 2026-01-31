@@ -1,0 +1,6 @@
+<div class="footer-glow">
+    <footer class="site-footer">
+        <span>OneHeart Life Plan — focused on what matters.</span>
+    </footer>
+</div>
+
