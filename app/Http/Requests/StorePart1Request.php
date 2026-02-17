@@ -14,6 +14,7 @@ class StorePart1Request extends FormRequest
     public function rules(): array
     {
         return [
+            'member_assignment_id' => ['required', 'integer', 'exists:member_assignments,id'],
             'lpaf_no' => ['required', 'integer'],
             'application_date' => ['required', 'date'],
             'sales_counselor_code' => ['required', 'string', 'max:255'],
@@ -21,7 +22,7 @@ class StorePart1Request extends FormRequest
             'gross_contact_price' => ['required', 'integer'],
             'mode_of_payment' => ['required', 'string', 'max:255'],
             'terms_of_payment' => ['required', 'string', 'max:255'],
-            'due_date' => ['required_unless:plan_type,Legacy Care', 'date', 'nullable'],
+            'due_date' => ['required', 'date'],
             'amount' => ['required', 'integer'],
         ];
     }

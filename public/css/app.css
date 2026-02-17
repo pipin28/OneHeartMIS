@@ -581,6 +581,77 @@ a.button:hover {
     background: rgba(239, 68, 68, 0.2);
 }
 
+.profile-menu {
+    position: relative;
+}
+
+.profile-trigger {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.profile-name {
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.profile-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 180px;
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 12px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+    z-index: 40;
+}
+
+.profile-menu.is-open .profile-dropdown {
+    display: flex;
+}
+
+.profile-dropdown-item {
+    appearance: none;
+    width: 100%;
+    text-align: left;
+    text-decoration: none;
+    color: #1f2733;
+    font-weight: 700;
+    font-size: 13px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: 10px;
+    padding: 8px 10px;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.profile-dropdown-item:hover {
+    color: #b56200;
+    border-color: rgba(255, 159, 28, 0.35);
+}
+
+.profile-dropdown-logout {
+    color: #b91c1c;
+    border-color: rgba(239, 68, 68, 0.25);
+    background: rgba(239, 68, 68, 0.12);
+}
+
+.profile-dropdown-logout:hover {
+    color: #991b1b;
+    border-color: rgba(239, 68, 68, 0.45);
+    background: rgba(239, 68, 68, 0.2);
+}
+
 .site-footer {
     font-size: 13px;
     color: var(--muted);
@@ -1238,6 +1309,120 @@ a.button:hover {
     box-shadow: none;
 }
 
+.members-filters {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.members-mode-group {
+    display: inline-flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.member-mode-filter {
+    min-height: 34px;
+    padding: 7px 10px;
+    font-size: 12px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.03);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: none;
+}
+
+.member-mode-filter:hover {
+    border-color: rgba(34, 197, 94, 0.45);
+}
+
+.member-mode-filter.is-active {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #ffffff;
+    font-weight: 800;
+    box-shadow: 0 8px 18px rgba(34, 197, 94, 0.35);
+}
+
+.member-mode-filter[aria-pressed="true"] {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #ffffff;
+}
+
+.members-search {
+    min-width: 260px;
+    max-width: 340px;
+    width: 100%;
+    height: 36px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: #fff;
+    padding: 8px 11px;
+    font-size: 13px;
+    color: #1f2733;
+}
+
+.members-search:focus {
+    outline: none;
+    border-color: rgba(255, 159, 28, 0.55);
+    box-shadow: 0 0 0 3px rgba(255, 159, 28, 0.16);
+}
+
+.members-page-size {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.members-page-size select {
+    height: 34px;
+    min-width: 72px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: #fff;
+    padding: 6px 10px;
+    font-size: 13px;
+}
+
+.members-pagination {
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.members-pagination-info {
+    font-size: 13px;
+    color: var(--muted);
+}
+
+.members-page-numbers {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.members-page-btn {
+    min-width: 34px;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 10px;
+    box-shadow: none;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    background: rgba(0, 0, 0, 0.03);
+}
+
+.members-page-btn.is-active {
+    background: rgba(255, 159, 28, 0.16);
+    border-color: rgba(255, 159, 28, 0.45);
+    color: #b56200;
+}
+
 .table-action .button.is-ghost:hover {
     border-color: rgba(255, 159, 28, 0.35);
     background: rgba(255, 159, 28, 0.12);
@@ -1247,6 +1432,20 @@ a.button:hover {
     display: inline-flex;
     align-items: center;
     gap: 8px;
+}
+
+@media (max-width: 720px) {
+    .members-filters {
+        width: 100%;
+        justify-content: flex-start;
+    }
+    .members-search {
+        max-width: none;
+        min-width: 0;
+    }
+    .members-pagination {
+        justify-content: flex-start;
+    }
 }
 
 .inline-form {
@@ -1306,6 +1505,45 @@ a.button:hover {
 .button.is-ghost:hover {
     border-color: rgba(255, 159, 28, 0.35);
     background: rgba(255, 159, 28, 0.12);
+}
+
+/* Keep show-members mode filter active state visible despite generic ghost button styles */
+.button.member-mode-filter.is-active,
+.button.member-mode-filter[aria-pressed="true"] {
+    background: #86efac;
+    border-color: #4ade80;
+    color: #14532d;
+    font-weight: 800;
+    box-shadow: 0 8px 18px rgba(74, 222, 128, 0.35);
+}
+
+.button.member-mode-filter.is-active:hover,
+.button.member-mode-filter[aria-pressed="true"]:hover {
+    background: #4ade80;
+    border-color: #22c55e;
+    color: #14532d;
+}
+
+/* Manager scope toggle (My Members / All Members) */
+.button.member-scope-filter {
+    min-height: 34px;
+    padding: 7px 12px;
+    font-size: 12px;
+    border-radius: 10px;
+}
+
+.button.member-scope-filter.is-active {
+    background: #bfdbfe;
+    border-color: #93c5fd;
+    color: #1e3a8a;
+    font-weight: 800;
+    box-shadow: 0 8px 18px rgba(147, 197, 253, 0.35);
+}
+
+.button.member-scope-filter.is-active:hover {
+    background: #93c5fd;
+    border-color: #60a5fa;
+    color: #1e3a8a;
 }
 
 .button.is-primary {
@@ -1542,12 +1780,15 @@ a.button:hover {
 .modal-grid .modal-section .modal-label {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     padding: 8px 12px;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
     font-weight: 800;
     letter-spacing: 0.02em;
+    text-align: center;
+    width: 100%;
 }
 .modal-grid .modal-section:nth-child(1) .modal-label {
     background: #fff7ed;
@@ -1733,4 +1974,40 @@ select:focus {
 }
 #modalBeneficiary .bene-block div {
     line-height: 1.5;
+}
+
+/* Member snapshot: force five cards per row on wide screens */
+#memberModal .modal-grid {
+    grid-template-columns: repeat(5, minmax(180px, 1fr));
+}
+@media (max-width: 1200px) {
+    #memberModal .modal-grid {
+        grid-template-columns: repeat(3, minmax(200px, 1fr));
+    }
+}
+@media (max-width: 900px) {
+    #memberModal .modal-grid {
+        grid-template-columns: repeat(2, minmax(200px, 1fr));
+    }
+}
+@media (max-width: 640px) {
+    #memberModal .modal-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Member snapshot: wider modal */
+#memberModal .modal-card {
+    max-width: 1550px;
+    width: min(97vw, 1550px);
+}
+
+/* Show Members table headers centered */
+#membersTable thead th {
+    text-align: center;
+}
+
+/* Payment table headers centered */
+#paymentTable thead th {
+    text-align: center;
 }

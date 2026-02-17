@@ -1,8 +1,9 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
     <title>Show Members | OneHeart Life Plan</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -10,27 +11,61 @@
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('css/partials/nav.css') . '?v=' . filemtime(public_path('css/partials/nav.css')) }}">
 </head>
-<body class="has-shell">
+<body class="has-shell" data-readonly="{{ !empty($isReadOnly) ? '1' : '0' }}">
     <div class="page">
         @include('partials.header')
+
+        <div class="form-actions members-filters">
+                            
+                            <div class="button-group members-mode-group" role="group" aria-label="Filter members by payment mode">
+                                <button type="button" class="button is-ghost member-mode-filter is-active" data-mode="all" aria-pressed="true">All</button>
+                                <button type="button" class="button is-ghost member-mode-filter" data-mode="monthly" aria-pressed="false">Monthly</button>
+                                <button type="button" class="button is-ghost member-mode-filter" data-mode="quarterly" aria-pressed="false">Quarterly</button>
+                                <button type="button" class="button is-ghost member-mode-filter" data-mode="semi-annual" aria-pressed="false">Semi-Annual</button>
+                                <button type="button" class="button is-ghost member-mode-filter" data-mode="annual" aria-pressed="false">Annual</button>
+                                <button type="button" class="button is-ghost member-mode-filter" data-mode="one-time" aria-pressed="false">One-time</button>
+                            </div>
+                            <input type="search" id="memberSearch" class="members-search" placeholder="Search name, age, or date">
+                            <div class="members-page-size">
+                                <label for="memberPageSize">Show Page</label>
+                                <select id="memberPageSize">
+                                    <option value="10" selected>10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                            <button type="button" class="button" id="exportMembersBtn">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="vertical-align: text-bottom; margin-right: 6px;">
+                                    <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M14 2v5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                                    <path d="M9 11l6 6M15 11l-6 6" stroke="#1d6f42" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                                Save to Excel
+                            </button>
+                        </div>
 
         <main class="dashboard">
             <section class="wrap">
                 <div class="eyebrow">Members</div>
                 <div class="hero-title hero-small">Member directory</div>
                 <p class="hero-sub">Member details pulled from enrollment. Use this table to review key info.</p>
-
                 <div class="card">
                     <div class="card-header table-toolbar">
                         <div>
                             <div class="card-title">Member Details</div>
                             <div class="card-subtitle">Latest submissions first</div>
                         </div>
+                        
                         <div class="table-stats">
                             @php
                                 $latestDate = $members->first()?->created_at;
                             @endphp
                             <span class="stat-pill soft">Latest: <strong>{{ $latestDate ? \Carbon\Carbon::parse($latestDate)->diffForHumans() : '-' }}</strong></span>
+                            <span class="stat-pill soft">Scope: <strong>{{ $scopeLabel ?? 'Role-based' }}</strong></span>
+                            @if (!empty($percentageTotal) || $percentageTotal === 0.0)
+                                <span class="stat-pill">Total % Amount: <strong>{{ number_format($percentageTotal, 2) }}</strong></span>
+                            @endif
                         </div>
                     </div>
 
@@ -41,7 +76,7 @@
                         </div>
                     @else
                         <div class="table-scroll">
-                            <table class="data-table modern compact">
+                            <table class="data-table modern compact" id="membersTable">
                                 <thead>
                                     <tr>
                                         <th>Planholder</th>
@@ -63,9 +98,22 @@
                                             $part1 = $part1s[$member->part1_id] ?? null;
                                             $address = $addresses[$member->id] ?? null;
                                             $bene = $beneficiaries[$member->id][0] ?? null;
+                                            $assignment = $part1 && $part1->member_assignment_id
+                                                ? ($assignments[$part1->member_assignment_id] ?? null)
+                                                : null;
+                                            $fullName = trim($member->first_name . ' ' . ($member->midle_name ?? '') . ' ' . $member->surname);
+                                            $modeValue = strtolower(trim((string) ($part1->mode_of_payment ?? '')));
+                                            $modeValue = match ($modeValue) {
+                                                'semi annual' => 'semi-annual',
+                                                'yearly' => 'annual',
+                                                'one time', 'one_time' => 'one-time',
+                                                default => $modeValue,
+                                            };
+                                            $createdDate = $member->created_at ? \Carbon\Carbon::parse($member->created_at)->format('M d, Y') : '-';
+                                            $applicationDate = $part1?->application_date ?? '-';
                                         @endphp
-                                        <tr>
-                                            <td class="table-col-primary">{{ trim($member->first_name . ' ' . ($member->midle_name ?? '') . ' ' . $member->surname) }}</td>
+                                        <tr data-mode="{{ $modeValue }}" data-name="{{ strtolower($fullName) }}" data-age="{{ (string) $member->age }}" data-created="{{ strtolower($createdDate) }}" data-application="{{ strtolower((string) $applicationDate) }}">
+                                            <td class="table-col-primary">{{ $fullName }}</td>
                                             <td>{{ $member->age }}</td>
                                             <td>{{ $member->sex_at_birth }}</td>
                                             <td>{{ $member->civil_status }}</td>
@@ -74,7 +122,7 @@
                                             <td>{{ $member->name_of_employer }}</td>
                                             <td>{{ $member->office_address }}</td>
                                             <td>{{ $member->nationality }}</td>
-                                            <td>{{ $member->created_at ? \Carbon\Carbon::parse($member->created_at)->format('M d, Y') : '-' }}</td>
+                                            <td>{{ $createdDate }}</td>
                                             <td class="table-action">
                                                 <button
                                                     type="button"
@@ -82,13 +130,21 @@
                                                     data-member='@json($member)'
                                                     data-part1='@json($part1)'
                                                     data-address='@json($address)'
+                                                    data-assignment='@json($assignment)'
                                                     data-beneficiaries='@json($beneficiaries[$member->id] ?? [])'
+                                                    data-paid-installments="{{ (int) ($paidInstallmentsByPart1[$member->part1_id] ?? 0) }}"
+                                                    data-paid-amount="{{ (float) ($paidAmountByPart1[$member->part1_id] ?? 0) }}"
                                                 >View</button>
                                             </td>
                                         </tr>
                                     @endforeach
                                 </tbody>
                             </table>
+                        </div>
+                        <div class="members-pagination" id="membersPagination">
+                            <div class="members-pagination-info" id="membersPageInfo">Page 1 of 1</div>
+                            <div class="members-page-numbers" id="membersPageNumbers"></div>
+                            <button type="button" class="button is-ghost" id="membersNextPage">Next</button>
                         </div>
                     @endif
                 </div>
@@ -110,12 +166,14 @@
                         <span class="chip chip-muted" id="modalCreated">Created</span>
                     </div>
                 </div>
-                <div class="modal-head-actions">
+            <div class="modal-head-actions">
                     <button type="button" class="button is-primary modal-print-trigger">Print ID</button>
-                    <button type="button" class="button is-warning modal-edit-trigger">Update</button>
-                    <button type="button" class="button is-danger modal-delete-trigger">Delete</button>
+                    @if (empty($isReadOnly))
+                        <button type="button" class="button is-warning modal-edit-trigger">Update</button>
+                        <button type="button" class="button is-danger modal-delete-trigger">Delete</button>
+                    @endif
                     <button type="button" class="modal-close" aria-label="Close">&times;</button>
-                </div>
+            </div>
             </div>
             <div class="modal-grid">
                 <div class="modal-section">
@@ -129,6 +187,10 @@
                 <div class="modal-section">
                     <div class="modal-label">Address</div>
                     <ul class="modal-list" id="modalAddress"></ul>
+                </div>
+                <div class="modal-section">
+                    <div class="modal-label">Staff Info</div>
+                    <ul class="modal-list" id="modalStaff"></ul>
                 </div>
                 <div class="modal-section">
                     <div class="modal-label">Beneficiaries</div>
@@ -161,6 +223,10 @@
                 <button type="button" class="edit-card" data-section="beneficiary">
                     <div class="edit-card-title">Beneficiaries</div>
                     <p class="edit-card-copy">Primary beneficiary</p>
+                </button>
+                <button type="button" class="edit-card" data-section="staff">
+                    <div class="edit-card-title">Staff Info</div>
+                    <p class="edit-card-copy">Collector, agent, manager</p>
                 </button>
             </div>
         </div>
@@ -216,6 +282,16 @@
 
     <div class="toast" id="globalToast" role="status" aria-live="polite"></div>
 
+    @php
+        $staffUsersPayload = [
+            'collectors' => $collectors ?? [],
+            'agents' => $agents ?? [],
+            'managers' => $managers ?? [],
+        ];
+    @endphp
+    <script type="application/json" id="staffUsersPayload">@json($staffUsersPayload)</script>
+    <script type="application/json" id="planSettingsPayload">@json($planSettings ?? [])</script>
+
         <script>
         (() => {
             const modal = document.getElementById("memberModal");
@@ -223,6 +299,7 @@
             const modalPart1 = document.getElementById("modalPart1");
             const modalMember = document.getElementById("modalMember");
             const modalAddress = document.getElementById("modalAddress");
+            const modalStaff = document.getElementById("modalStaff");
             const modalBeneficiary = document.getElementById("modalBeneficiary");
             const modalPlan = document.getElementById("modalPlanType");
             const modalPayment = document.getElementById("modalPayment");
@@ -240,6 +317,32 @@
             const formBackButtons = document.querySelectorAll(".modal-back-selector");
             const formSaveButtons = document.querySelectorAll(".modal-save");
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+            const isReadOnly = document.body.dataset.readonly === "1";
+            const membersTable = document.getElementById("membersTable");
+            const memberRows = membersTable ? membersTable.querySelectorAll("tbody tr") : [];
+            const memberSearch = document.getElementById("memberSearch");
+            const memberModeFilters = document.querySelectorAll(".member-mode-filter");
+            const memberPageSize = document.getElementById("memberPageSize");
+            const membersPageInfo = document.getElementById("membersPageInfo");
+            const membersPageNumbers = document.getElementById("membersPageNumbers");
+            const membersNextPage = document.getElementById("membersNextPage");
+            const exportMembersBtn = document.getElementById("exportMembersBtn");
+            const staffUsers = (() => {
+                const payload = document.getElementById("staffUsersPayload")?.textContent || "{}";
+                try {
+                    return JSON.parse(payload);
+                } catch {
+                    return { collectors: [], agents: [], managers: [] };
+                }
+            })();
+            const planSettings = (() => {
+                const payload = document.getElementById("planSettingsPayload")?.textContent || "{}";
+                try {
+                    return JSON.parse(payload);
+                } catch {
+                    return {};
+                }
+            })();
             let currentTriggerBtn = null;
             let currentRow = null;
             const editSuccessBanner = document.getElementById("editSuccessBanner");
@@ -252,6 +355,7 @@
                 member: null,
                 part1: null,
                 address: null,
+                assignment: null,
                 benes: [],
                 bene: null,
             };
@@ -277,6 +381,48 @@
                 const { label, className } = paymentStatusDisplay(status);
                 modalPayment.textContent = label;
                 modalPayment.className = className;
+            };
+
+            const parseMonthsFromTerms = (termsRaw) => {
+                const terms = (termsRaw || "").toString().toLowerCase();
+                const monthMatch = terms.match(/(\d+)\s*month/);
+                if (monthMatch) return Number(monthMatch[1]) || 0;
+                const yearMatch = terms.match(/(\d+)\s*year/);
+                if (yearMatch) return (Number(yearMatch[1]) || 0) * 12;
+                return 0;
+            };
+
+            const getMonthsPaidLabel = (part1 = {}) => {
+                const paidInstallments = Number(part1.paid_installments || 0);
+                const mode = (part1.mode_of_payment || "").toString().toLowerCase().trim();
+                let months = 0;
+                switch (mode) {
+                    case "quarterly":
+                        months = paidInstallments * 3;
+                        break;
+                    case "semi-annual":
+                    case "semi annual":
+                        months = paidInstallments * 6;
+                        break;
+                    case "annual":
+                    case "yearly":
+                        months = paidInstallments * 12;
+                        break;
+                    case "one-time":
+                    case "one time":
+                    case "one_time":
+                        months = paidInstallments > 0 ? (parseMonthsFromTerms(part1.terms_of_payment) || 1) : 0;
+                        break;
+                    default:
+                        months = paidInstallments;
+                        break;
+                }
+                return `${months} month(s)`;
+            };
+
+            const formatCurrency = (value) => {
+                const num = Number(value || 0);
+                return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
 
             const writeList = (node, entries) => {
@@ -315,11 +461,169 @@
                 setTimeout(() => toast.classList.remove("is-visible"), 2200);
             };
 
+            let activeModeFilter = "all";
+            let currentPage = 1;
+
+            const getFilteredRows = () => {
+                const searchTerm = (memberSearch?.value || "").toLowerCase().trim();
+                return Array.from(memberRows).filter((row) => {
+                    const rowMode = (row.dataset.mode || "").toLowerCase();
+                    const matchesMode = activeModeFilter === "all" || rowMode === activeModeFilter;
+                    const haystack = [
+                        row.dataset.name || "",
+                        row.dataset.age || "",
+                        row.dataset.created || "",
+                        row.dataset.application || "",
+                    ].join(" ");
+                    const matchesSearch = !searchTerm || haystack.includes(searchTerm);
+                    return matchesMode && matchesSearch;
+                });
+            };
+
+            const renderPageNumbers = (totalPages) => {
+                if (!membersPageNumbers) return;
+                membersPageNumbers.innerHTML = "";
+                for (let page = 1; page <= totalPages; page++) {
+                    const btn = document.createElement("button");
+                    btn.type = "button";
+                    btn.className = `button is-ghost members-page-btn ${page === currentPage ? "is-active" : ""}`;
+                    btn.textContent = String(page);
+                    btn.addEventListener("click", () => {
+                        currentPage = page;
+                        applyMemberFilters();
+                    });
+                    membersPageNumbers.appendChild(btn);
+                }
+            };
+
+            const applyMemberFilters = () => {
+                if (!memberRows.length) return;
+
+                const filtered = getFilteredRows();
+                const perPage = Math.max(1, Number(memberPageSize?.value || 10));
+                const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+                if (currentPage > totalPages) currentPage = totalPages;
+
+                const start = (currentPage - 1) * perPage;
+                const end = start + perPage;
+                const visibleSet = new Set(filtered.slice(start, end));
+
+                memberRows.forEach((row) => {
+                    row.style.display = visibleSet.has(row) ? "" : "none";
+                });
+
+                if (membersPageInfo) {
+                    membersPageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+                }
+                if (membersNextPage) {
+                    membersNextPage.disabled = currentPage >= totalPages;
+                }
+                renderPageNumbers(totalPages);
+            };
+
+            const toCsvCell = (value) => {
+                const text = String(value ?? "").replace(/"/g, '""');
+                return `"${text}"`;
+            };
+
+            const exportVisibleRowsToCsv = () => {
+                if (!membersTable) return;
+
+                const headerCells = Array.from(membersTable.querySelectorAll("thead th"));
+                const exportIndexes = [];
+                const headers = [];
+
+                headerCells.forEach((th, index) => {
+                    const label = (th.textContent || "").trim();
+                    if (!label || label.toLowerCase() === "action") return;
+                    exportIndexes.push(index);
+                    headers.push(label);
+                });
+
+                const visibleRows = Array.from(memberRows).filter((row) => row.style.display !== "none");
+                if (!visibleRows.length) {
+                    showToast("No filtered rows to export.");
+                    return;
+                }
+
+                const lines = [];
+                lines.push(headers.map(toCsvCell).join(","));
+
+                visibleRows.forEach((row) => {
+                    const cells = Array.from(row.querySelectorAll("td"));
+                    const values = exportIndexes.map((i) => (cells[i]?.textContent || "").trim());
+                    lines.push(values.map(toCsvCell).join(","));
+                });
+
+                const now = new Date();
+                const pad = (n) => String(n).padStart(2, "0");
+                const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+                const filename = `members_filtered_${stamp}.csv`;
+                const csv = "\uFEFF" + lines.join("\r\n");
+
+                const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                URL.revokeObjectURL(url);
+
+                showToast("Filtered table exported.");
+            };
+
+            memberModeFilters.forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    memberModeFilters.forEach((item) => {
+                        item.classList.remove("is-active");
+                        item.setAttribute("aria-pressed", "false");
+                    });
+                    btn.classList.add("is-active");
+                    btn.setAttribute("aria-pressed", "true");
+                    activeModeFilter = btn.dataset.mode || "all";
+                    currentPage = 1;
+                    applyMemberFilters();
+                });
+            });
+            memberSearch?.addEventListener("input", () => {
+                currentPage = 1;
+                applyMemberFilters();
+            });
+            memberPageSize?.addEventListener("change", () => {
+                currentPage = 1;
+                applyMemberFilters();
+            });
+            membersNextPage?.addEventListener("click", () => {
+                currentPage += 1;
+                applyMemberFilters();
+            });
+            exportMembersBtn?.addEventListener("click", exportVisibleRowsToCsv);
+            applyMemberFilters();
+
             const textField = (label, name, value = "") => {
                 return `
                     <label class="modal-field">
                         <span>${label}</span>
                         <input type="text" name="${name}" value="${value ?? ""}" />
+                    </label>
+                `;
+            };
+            const selectField = (label, name, options = [], value = "") => {
+                const opts = options
+                    .map(opt => {
+                        const selected = String(value ?? "") === String(opt.id) ? "selected" : "";
+                        return `<option value="${opt.id}" ${selected}>${opt.name}</option>`;
+                    })
+                    .join("");
+                return `
+                    <label class="modal-field">
+                        <span>${label}</span>
+                        <select name="${name}">
+                            <option value="" disabled>Select ${label.toLowerCase()}</option>
+                            ${opts}
+                        </select>
                     </label>
                 `;
             };
@@ -427,6 +731,18 @@
                                 </div>
                             `,
                         };
+                    case "staff":
+                        return {
+                            title: "Staff Info",
+                            subtitle: "Update assigned staff accounts.",
+                            body: `
+                                <div class="modal-form-grid">
+                                    ${selectField("Collector", "collector_user_id", staffUsers.collectors || [], currentContext.assignment?.collector_user_id)}
+                                    ${selectField("Agent", "agent_user_id", staffUsers.agents || [], currentContext.assignment?.agent_user_id)}
+                                    ${selectField("Manager", "manager_user_id", staffUsers.managers || [], currentContext.assignment?.manager_user_id)}
+                                </div>
+                            `,
+                        };
                     default:
                         return { title: "Edit Section", subtitle: "Select a section to edit.", body: "" };
                 }
@@ -471,6 +787,7 @@
                 const member = currentContext.member || {};
                 const part1 = currentContext.part1 || {};
                 const address = currentContext.address || {};
+                const assignment = currentContext.assignment || {};
                 const benes = currentContext.benes || [];
                 const primaryBene = currentContext.bene || {};
 
@@ -484,7 +801,9 @@
                     ["Plan Type", part1.plan_type ?? "-"],
                     ["Application Date", part1.application_date ?? "-"],
                     ["Gross Contact Price", part1.gross_contact_price ?? "-"],
-                    ["Payment Status", paymentStatusDisplay(part1.payment_status).label],
+                    ["Legacy Monthly (After One-time)", part1.plan_type === "Legacy Care" ? formatCurrency(planSettings?.["Legacy Care"]?.legacy_monthly_amount) : "-"],
+                    ["How many months paid", getMonthsPaidLabel(part1)],
+                    ["Total paid", formatCurrency(part1.paid_amount_total)],
                     ["Mode of Payment", part1.mode_of_payment ?? "-"],
                     ["Terms of Payment", part1.terms_of_payment ?? "-"],
                     ["Due Date", part1.due_date ?? "-"],
@@ -523,6 +842,12 @@
                     ["Source of Funds", address.source_of_funds_if_not_imployed ?? "-"],
                 ]);
 
+                writeList(modalStaff, [
+                    ["Collector Name", assignment.collector_name ?? "-"],
+                    ["Agent Name", assignment.agent_name ?? "-"],
+                    ["Manager Name", assignment.manager_name ?? "-"],
+                ]);
+
                 if (!benes.length) {
                     writeList(modalBeneficiary, []);
                 } else {
@@ -548,7 +873,10 @@
                 btn.addEventListener("click", () => {
                     const member = JSON.parse(btn.dataset.member || "{}");
                     const part1 = JSON.parse(btn.dataset.part1 || "{}");
+                    part1.paid_installments = Number(btn.dataset.paidInstallments || 0);
+                    part1.paid_amount_total = Number(btn.dataset.paidAmount || 0);
                     const address = JSON.parse(btn.dataset.address || "{}");
+                    const assignment = JSON.parse(btn.dataset.assignment || "{}");
                     const benes = JSON.parse(btn.dataset.beneficiaries || "[]");
 
                     currentTriggerBtn = btn;
@@ -556,6 +884,7 @@
                     currentContext.member = member;
                     currentContext.part1 = part1;
                     currentContext.address = address;
+                    currentContext.assignment = assignment;
                     currentContext.benes = benes || [];
                     currentContext.bene = (benes && benes.length) ? benes[0] : null;
                     renderModalDetails();
@@ -565,190 +894,207 @@
                 });
             });
 
-            editTrigger?.addEventListener("click", () => {
-                if (!currentContext.member) return;
-                toggleOverlay(selectorModal, true);
-            });
+            if (!isReadOnly) {
+                editTrigger?.addEventListener("click", () => {
+                    if (!currentContext.member) return;
+                    toggleOverlay(selectorModal, true);
+                });
 
-            deleteTrigger?.addEventListener("click", () => {
-                if (!currentContext.member) {
-                    showToast("Select a member first.");
-                    return;
-                }
-                toggleOverlay(deleteConfirmModal, true);
-            });
+                deleteTrigger?.addEventListener("click", () => {
+                    if (!currentContext.member) {
+                        showToast("Select a member first.");
+                        return;
+                    }
+                    toggleOverlay(deleteConfirmModal, true);
+                });
 
-            deleteConfirmBtn?.addEventListener("click", async () => {
-                if (!currentContext.member) {
-                    showToast("Select a member first.");
-                    toggleOverlay(deleteConfirmModal, false);
-                    return;
-                }
-                const memberId = currentContext.member.id;
-                if (!memberId) {
-                    showToast("Missing member id.");
-                    toggleOverlay(deleteConfirmModal, false);
-                    return;
-                }
-
-                deleteConfirmBtn.setAttribute("disabled", "true");
-                deleteTrigger?.setAttribute("disabled", "true");
-                try {
-                    const response = await fetch(`/members/${memberId}`, {
-                        method: "DELETE",
-                        headers: {
-                            "Accept": "application/json",
-                            "X-CSRF-TOKEN": csrfToken,
-                        },
-                    });
-
-                    if (!response.ok) {
-                        const payload = await response.json().catch(() => ({}));
-                        throw new Error(payload?.message || "Delete failed.");
+                deleteConfirmBtn?.addEventListener("click", async () => {
+                    if (!currentContext.member) {
+                        showToast("Select a member first.");
+                        toggleOverlay(deleteConfirmModal, false);
+                        return;
+                    }
+                    const memberId = currentContext.member.id;
+                    if (!memberId) {
+                        showToast("Missing member id.");
+                        toggleOverlay(deleteConfirmModal, false);
+                        return;
                     }
 
-                    currentRow?.remove();
-                    closeModal();
-                    toggleOverlay(deleteConfirmModal, false);
-                    showToast("Member deleted.");
-                } catch (err) {
-                    showToast(err.message || "Delete failed.");
-                } finally {
-                    deleteConfirmBtn.removeAttribute("disabled");
-                    deleteTrigger?.removeAttribute("disabled");
-                }
-            });
+                    deleteConfirmBtn.setAttribute("disabled", "true");
+                    deleteTrigger?.setAttribute("disabled", "true");
+                    try {
+                        const response = await fetch(`/members/${memberId}`, {
+                            method: "DELETE",
+                            headers: {
+                                "Accept": "application/json",
+                                "X-CSRF-TOKEN": csrfToken,
+                            },
+                        });
 
-            deleteCancelBtn?.addEventListener("click", () => {
-                toggleOverlay(deleteConfirmModal, false);
-            });
+                        if (!response.ok) {
+                            const payload = await response.json().catch(() => ({}));
+                            throw new Error(payload?.message || "Delete failed.");
+                        }
+
+                        currentRow?.remove();
+                        closeModal();
+                        toggleOverlay(deleteConfirmModal, false);
+                        showToast("Member deleted.");
+                    } catch (err) {
+                        showToast(err.message || "Delete failed.");
+                    } finally {
+                        deleteConfirmBtn.removeAttribute("disabled");
+                        deleteTrigger?.removeAttribute("disabled");
+                    }
+                });
+
+                deleteCancelBtn?.addEventListener("click", () => {
+                    toggleOverlay(deleteConfirmModal, false);
+                });
+            }
 
             modal?.addEventListener("click", (e) => {
                 if (e.target === modal || e.target.classList.contains("modal-close")) closeModal();
             });
 
-            deleteConfirmModal?.addEventListener("click", (e) => {
-                if (e.target === deleteConfirmModal || e.target.classList.contains("modal-close")) {
-                    toggleOverlay(deleteConfirmModal, false);
-                }
-            });
-
-            selectorModal?.addEventListener("click", (e) => {
-                if (e.target === selectorModal || e.target.classList.contains("modal-close")) {
-                    toggleOverlay(selectorModal, false);
-                }
-            });
-
-            selectorModal?.querySelectorAll("[data-section]").forEach(btn => {
-                btn.addEventListener("click", () => openFormModal(btn.dataset.section));
-            });
-
-            formModal?.addEventListener("click", (e) => {
-                if (e.target === formModal || e.target.classList.contains("modal-close")) {
-                    toggleOverlay(formModal, false);
-                }
-            });
-
-            formBackButtons.forEach(btn => {
-                btn.addEventListener("click", () => {
-                    toggleOverlay(formModal, false);
-                    toggleOverlay(selectorModal, true);
+            if (!isReadOnly) {
+                deleteConfirmModal?.addEventListener("click", (e) => {
+                    if (e.target === deleteConfirmModal || e.target.classList.contains("modal-close")) {
+                        toggleOverlay(deleteConfirmModal, false);
+                    }
                 });
-            });
 
-            formSaveButtons.forEach(btn => {
-                btn.addEventListener("click", async () => {
-                    if (!currentContext.member || !currentSection) {
-                        alert("Select a member and section first.");
-                        return;
+                selectorModal?.addEventListener("click", (e) => {
+                    if (e.target === selectorModal || e.target.classList.contains("modal-close")) {
+                        toggleOverlay(selectorModal, false);
                     }
+                });
 
-                    const formData = new FormData(editFormBody);
-                    formData.append("_token", csrfToken);
-                    formData.append("section", currentSection);
-                    formData.append("part1_id", currentContext.part1?.id || currentContext.member?.part1_id || "");
-                    formData.append("part2_id", currentContext.member?.id || "");
-                    if (currentContext.address?.id) {
-                        formData.append("par2_residential_address_id", currentContext.address.id);
+                selectorModal?.querySelectorAll("[data-section]").forEach(btn => {
+                    btn.addEventListener("click", () => openFormModal(btn.dataset.section));
+                });
+
+                formModal?.addEventListener("click", (e) => {
+                    if (e.target === formModal || e.target.classList.contains("modal-close")) {
+                        toggleOverlay(formModal, false);
                     }
-                    if (currentSection === "beneficiary") {
-                        const beneId = editFormBody.querySelector('[name="beneficiary_id"]')?.value;
-                        if (beneId) formData.append("beneficiary_id", beneId);
-                    }
+                });
 
-                    try {
-                        const response = await fetch(`/members/${currentContext.member.id}/update`, {
-                            method: "POST",
-                            headers: { "Accept": "application/json" },
-                            body: formData,
-                        });
+                formBackButtons.forEach(btn => {
+                    btn.addEventListener("click", () => {
+                        toggleOverlay(formModal, false);
+                        toggleOverlay(selectorModal, true);
+                    });
+                });
 
-                        const payload = await response.json().catch(() => ({}));
-                        if (!response.ok) {
-                            const message = payload?.message || "Something went wrong while saving.";
-                            throw new Error(message);
+                formSaveButtons.forEach(btn => {
+                    btn.addEventListener("click", async () => {
+                        if (!currentContext.member || !currentSection) {
+                            alert("Select a member and section first.");
+                            return;
                         }
 
-                        const entries = Object.fromEntries(formData.entries());
-                        const updated = { ...entries };
-                        switch (currentSection) {
-                            case "enrollment":
-                                currentContext.part1 = { ...(currentContext.part1 || {}), ...updated };
-                                break;
-                            case "member":
-                                currentContext.member = { ...(currentContext.member || {}), ...updated };
-                                break;
-                            case "address":
-                                currentContext.address = { ...(currentContext.address || {}), ...updated };
-                                break;
-                            case "beneficiary":
-                                {
-                                    const beneId = updated.beneficiary_id || updated.id;
-                                    if (beneId && currentContext.benes) {
-                                        const target = currentContext.benes.find(b => String(b.id) === String(beneId));
-                                        if (target) {
-                                            Object.assign(target, updated);
-                                            currentContext.bene = target;
+                        const formData = new FormData(editFormBody);
+                        formData.append("_token", csrfToken);
+                        formData.append("section", currentSection);
+                        formData.append("part1_id", currentContext.part1?.id || currentContext.member?.part1_id || "");
+                        formData.append("part2_id", currentContext.member?.id || "");
+                        formData.append("assignment_id", currentContext.assignment?.id || currentContext.part1?.member_assignment_id || "");
+                        if (currentContext.address?.id) {
+                            formData.append("par2_residential_address_id", currentContext.address.id);
+                        }
+                        if (currentSection === "beneficiary") {
+                            const beneId = editFormBody.querySelector('[name="beneficiary_id"]')?.value;
+                            if (beneId) formData.append("beneficiary_id", beneId);
+                        }
+
+                        try {
+                            const response = await fetch(`/members/${currentContext.member.id}/update`, {
+                                method: "POST",
+                                headers: { "Accept": "application/json" },
+                                body: formData,
+                            });
+
+                            const payload = await response.json().catch(() => ({}));
+                            if (!response.ok) {
+                                const message = payload?.message || "Something went wrong while saving.";
+                                throw new Error(message);
+                            }
+
+                            const entries = Object.fromEntries(formData.entries());
+                            const updated = { ...entries };
+                            switch (currentSection) {
+                                case "enrollment":
+                                    currentContext.part1 = { ...(currentContext.part1 || {}), ...updated };
+                                    break;
+                                case "member":
+                                    currentContext.member = { ...(currentContext.member || {}), ...updated };
+                                    break;
+                                case "address":
+                                    currentContext.address = { ...(currentContext.address || {}), ...updated };
+                                    break;
+                                case "beneficiary":
+                                    {
+                                        const beneId = updated.beneficiary_id || updated.id;
+                                        if (beneId && currentContext.benes) {
+                                            const target = currentContext.benes.find(b => String(b.id) === String(beneId));
+                                            if (target) {
+                                                Object.assign(target, updated);
+                                                currentContext.bene = target;
+                                            }
                                         }
                                     }
-                                }
-                                break;
-                        }
+                                    break;
+                                case "staff":
+                                    currentContext.assignment = { ...(currentContext.assignment || {}), ...updated };
+                                    {
+                                        const findName = (list, id) => (list || []).find(u => String(u.id) === String(id))?.name;
+                                        const cName = findName(staffUsers.collectors, updated.collector_user_id);
+                                        const aName = findName(staffUsers.agents, updated.agent_user_id);
+                                        const mName = findName(staffUsers.managers, updated.manager_user_id);
+                                        if (cName) currentContext.assignment.collector_name = cName;
+                                        if (aName) currentContext.assignment.agent_name = aName;
+                                        if (mName) currentContext.assignment.manager_name = mName;
+                                    }
+                                    break;
+                            }
 
-                        if (currentRow && currentSection === "member") {
-                            const cells = currentRow.querySelectorAll("td");
-                            const m = currentContext.member || {};
-                            if (cells[0]) cells[0].textContent = [m.first_name, m.midle_name, m.surname].filter(Boolean).join(" ");
-                            if (cells[1]) cells[1].textContent = m.age || "";
-                            if (cells[2]) cells[2].textContent = m.sex_at_birth || "";
-                            if (cells[3]) cells[3].textContent = m.civil_status || "";
-                            if (cells[4]) cells[4].textContent = m.cellular_no || "";
-                            if (cells[5]) cells[5].textContent = m.email_address || "";
-                            if (cells[6]) cells[6].textContent = m.name_of_employer || "";
-                            if (cells[7]) cells[7].textContent = m.office_address || "";
-                            if (cells[8]) cells[8].textContent = m.nationality || "";
-                        }
+                            if (currentRow && currentSection === "member") {
+                                const cells = currentRow.querySelectorAll("td");
+                                const m = currentContext.member || {};
+                                if (cells[0]) cells[0].textContent = [m.first_name, m.midle_name, m.surname].filter(Boolean).join(" ");
+                                if (cells[1]) cells[1].textContent = m.age || "";
+                                if (cells[2]) cells[2].textContent = m.sex_at_birth || "";
+                                if (cells[3]) cells[3].textContent = m.civil_status || "";
+                                if (cells[4]) cells[4].textContent = m.cellular_no || "";
+                                if (cells[5]) cells[5].textContent = m.email_address || "";
+                                if (cells[6]) cells[6].textContent = m.name_of_employer || "";
+                                if (cells[7]) cells[7].textContent = m.office_address || "";
+                                if (cells[8]) cells[8].textContent = m.nationality || "";
+                            }
 
-                        renderModalDetails();
-                        if (editSuccessBanner) {
-                            editSuccessBanner.classList.add("is-visible");
-                            setTimeout(() => editSuccessBanner.classList.remove("is-visible"), 2000);
+                            renderModalDetails();
+                            if (editSuccessBanner) {
+                                editSuccessBanner.classList.add("is-visible");
+                                setTimeout(() => editSuccessBanner.classList.remove("is-visible"), 2000);
+                            }
+                            showToast("Changes saved.");
+                            showSuccessModal();
+                            toggleOverlay(formModal, false);
+                            toggleOverlay(selectorModal, false);
+                        } catch (err) {
+                            showToast(err.message || "Save failed. Please try again.");
                         }
-                        showToast("Changes saved.");
-                        showSuccessModal();
-                        toggleOverlay(formModal, false);
-                        toggleOverlay(selectorModal, false);
-                    } catch (err) {
-                        showToast(err.message || "Save failed. Please try again.");
-                    }
+                    });
                 });
-            });
 
-            editSuccessModal?.addEventListener("click", (e) => {
-                if (e.target === editSuccessModal) toggleOverlay(editSuccessModal, false);
-            });
+                editSuccessModal?.addEventListener("click", (e) => {
+                    if (e.target === editSuccessModal) toggleOverlay(editSuccessModal, false);
+                });
 
-            editSuccessClose?.addEventListener("click", () => toggleOverlay(editSuccessModal, false));
+                editSuccessClose?.addEventListener("click", () => toggleOverlay(editSuccessModal, false));
+            }
 
             printTrigger?.addEventListener("click", () => {
                 if (!currentContext.member) {
@@ -796,3 +1142,4 @@
     </script>
 </body>
 </html>
+

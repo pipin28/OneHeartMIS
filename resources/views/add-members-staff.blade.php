@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
-    <title>Add Members - Address | OneHeart Life Plan</title>
+    <title>Add Members - Staff Info | OneHeart Life Plan</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
@@ -20,13 +20,12 @@
         <main class="dashboard">
             <section class="wrap">
                 @php
-                    $beneficiaryId = $beneficiary->id ?? null;
                     $assignmentId = $assignment->id ?? null;
                 @endphp
                 <div class="progress-steps">
                     @if ($isDraft)
-                        <a class="step-pill" href="{{ route('add-members.draft.staff') }}">
-                            <input type="radio" name="progress_step" aria-hidden="true">
+                        <a class="step-pill is-current" href="#">
+                            <input type="radio" name="progress_step" checked aria-hidden="true">
                             <span>Staff Info</span>
                         </a>
                         <a class="step-pill" href="{{ route('add-members.draft.enrollment') }}">
@@ -37,8 +36,8 @@
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Member Details</span>
                         </a>
-                        <a class="step-pill is-current" href="#">
-                            <input type="radio" name="progress_step" checked aria-hidden="true">
+                        <a class="step-pill" href="{{ route('add-members.draft.address') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Address</span>
                         </a>
                         <a class="step-pill" href="{{ route('add-members.draft.beneficiaries') }}">
@@ -46,20 +45,20 @@
                             <span>Beneficiaries</span>
                         </a>
                     @else
-                        <a class="step-pill {{ $assignmentId ? '' : 'is-disabled' }}" href="{{ $assignmentId ? route('add-members.staff', ['assignment' => $assignmentId]) : '#' }}">
-                            <input type="radio" name="progress_step" aria-hidden="true">
+                        <a class="step-pill is-current" href="#">
+                            <input type="radio" name="progress_step" checked aria-hidden="true">
                             <span>Staff Info</span>
                         </a>
-                        <a class="step-pill" href="{{ route('add-members.edit', ['part1' => $part1Id]) }}">
+                        <a class="step-pill {{ $assignmentId ? '' : 'is-disabled' }}" href="{{ $assignmentId ? route('add-members', ['assignment' => $assignmentId]) : '#' }}">
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Member Enrollment</span>
                         </a>
-                        <a class="step-pill" href="{{ route('add-members.part2', ['part1' => $part1Id]) . '?part2=' . $part2Id }}">
+                        <a class="step-pill is-disabled" href="#">
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Member Details</span>
                         </a>
-                        <a class="step-pill is-current" href="#">
-                            <input type="radio" name="progress_step" checked aria-hidden="true">
+                        <a class="step-pill is-disabled" href="#">
+                            <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Address</span>
                         </a>
                         <a class="step-pill is-disabled" href="#">
@@ -68,12 +67,9 @@
                         </a>
                     @endif
                 </div>
-                <div class="form-actions" style="justify-content: flex-start; margin-bottom: 8px;">
-                    <a href="{{ $isDraft ? route('add-members.draft.part2') : route('add-members.part2', ['part1' => $part1Id]) . '?part2=' . $part2Id }}" class="button" style="box-shadow: none;">Back to Member Details</a>
-                </div>
                 <div class="eyebrow">Add Members</div>
-                <div class="hero-title hero-small">Residential address</div>
-                <p class="hero-sub">Finalize enrollment with the member's address and identification details.</p>
+                <div class="hero-title hero-small">Collector, agent, manager</div>
+                <p class="hero-sub">Select the staff accounts before starting member enrollment.</p>
 
                 @if (session('status'))
                     <div class="status">{{ session('status') }}</div>
@@ -82,51 +78,44 @@
                     <div class="status status-error">{{ $errors->first() }}</div>
                 @endif
 
-                <form method="POST" action="{{ $isDraft ? '#' : route('add-members.part2.address.store', ['part1' => $part1Id, 'part2' => $part2Id]) }}" class="form-grid" id="addressForm">
+                <form method="POST" action="{{ $isDraft ? '#' : route('add-members.staff.store') }}" class="form-grid" id="staffForm">
                     @csrf
-                    @if (! $isDraft)
-                        <input type="hidden" name="part1_id" value="{{ $part1Id }}">
-                        <input type="hidden" name="part2_id" value="{{ $part2Id }}">
-                    @endif
-
+                    <input type="hidden" name="assignment_id" value="{{ $assignmentId }}">
                     <div>
-                        <label for="lot_house_numer">Lot/House Number</label>
-                        <input type="text" id="lot_house_numer" name="lot_house_numer" value="{{ old('lot_house_numer', $address->lot_house_numer ?? '') }}" required>
+                        <label for="collector_user_id">Collector</label>
+                        <select id="collector_user_id" name="collector_user_id" required>
+                            <option value="" disabled {{ old('collector_user_id', $assignment->collector_user_id ?? '') ? '' : 'selected' }}>Select collector</option>
+                            @foreach ($collectors ?? [] as $user)
+                                <option value="{{ $user->id }}" {{ (string) old('collector_user_id', $assignment->collector_user_id ?? '') === (string) $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
-                        <label for="street">Street</label>
-                        <input type="text" id="street" name="street" value="{{ old('street', $address->street ?? '') }}" required>
+                        <label for="agent_user_id">Agent</label>
+                        <select id="agent_user_id" name="agent_user_id" required>
+                            <option value="" disabled {{ old('agent_user_id', $assignment->agent_user_id ?? '') ? '' : 'selected' }}>Select agent</option>
+                            @foreach ($agents ?? [] as $user)
+                                <option value="{{ $user->id }}" {{ (string) old('agent_user_id', $assignment->agent_user_id ?? '') === (string) $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div>
-                        <label for="barangay">Barangay</label>
-                        <input type="text" id="barangay" name="barangay" value="{{ old('barangay', $address->barangay ?? '') }}" required>
-                    </div>
-                    <div>
-                        <label for="province">Province</label>
-                        <input type="text" id="province" name="province" value="{{ old('province', $address->province ?? '') }}" required>
-                    </div>
-                    <div>
-                        <label for="zip_code">Zip Code</label>
-                        <input type="text" id="zip_code" name="zip_code" value="{{ old('zip_code', $address->zip_code ?? '') }}" required>
-                    </div>
-                    <div>
-                        <label for="contact_no">Contact No.</label>
-                        <input type="text" id="contact_no" name="contact_no" value="{{ old('contact_no', $address->contact_no ?? '') }}" required>
-                    </div>
-                    <div>
-                        <label for="sss_gsis_no">SSS/GSIS No.</label>
-                        <input type="text" id="sss_gsis_no" name="sss_gsis_no" value="{{ old('sss_gsis_no', $address->sss_gsis_no ?? '') }}" required>
-                    </div>
-                    <div>
-                        <label for="tin_no">TIN No.</label>
-                        <input type="text" id="tin_no" name="tin_no" value="{{ old('tin_no', $address->tin_no ?? '') }}" required>
-                    </div>
-                    <div>
-                        <label for="source_of_funds_if_not_imployed">Source of Funds (if not employed)</label>
-                        <input type="text" id="source_of_funds_if_not_imployed" name="source_of_funds_if_not_imployed" value="{{ old('source_of_funds_if_not_imployed', $address->source_of_funds_if_not_imployed ?? '') }}" required>
+                        <label for="manager_user_id">Manager</label>
+                        <select id="manager_user_id" name="manager_user_id" required>
+                            <option value="" disabled {{ old('manager_user_id', $assignment->manager_user_id ?? '') ? '' : 'selected' }}>Select manager</option>
+                            @foreach ($managers ?? [] as $user)
+                                <option value="{{ $user->id }}" {{ (string) old('manager_user_id', $assignment->manager_user_id ?? '') === (string) $user->id ? 'selected' : '' }}>
+                                    {{ $user->name }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="form-actions">
-                        <button type="submit">{{ $isDraft ? 'Next' : 'Save address' }}</button>
+                        <button type="submit">{{ $isDraft ? 'Next' : 'Save & next' }}</button>
                     </div>
                 </form>
             </section>
@@ -146,11 +135,12 @@
                 window.location.href = link.href;
             });
         });
+
         (() => {
             const isDraft = document.body.dataset.draft === "1";
             if (!isDraft) return;
             const DRAFT_KEY = "oneheart_member_draft_v1";
-            const form = document.getElementById('addressForm');
+            const form = document.getElementById('staffForm');
             const readDraft = () => {
                 try {
                     return JSON.parse(localStorage.getItem(DRAFT_KEY)) || {};
@@ -176,25 +166,25 @@
                 return data;
             };
             const fillForm = () => {
-                const address = readDraft().address || {};
-                Object.entries(address).forEach(([key, val]) => {
+                const staff = readDraft().staff || {};
+                Object.entries(staff).forEach(([key, val]) => {
                     const el = form?.querySelector(`[name="${key}"]`);
                     if (el && val !== undefined && val !== null) el.value = val;
                 });
             };
             const saveDraft = () => {
                 const draft = readDraft();
-                draft.address = { ...(draft.address || {}), ...getFormValues(form) };
+                draft.staff = { ...(draft.staff || {}), ...getFormValues(form) };
                 writeDraft(draft);
             };
 
             form?.addEventListener('submit', (e) => {
                 e.preventDefault();
                 saveDraft();
-                window.location.href = "{{ route('add-members.draft.beneficiaries') }}";
+                window.location.href = "{{ route('add-members.draft.enrollment') }}";
             });
 
-            document.querySelectorAll('.progress-steps a, .form-actions a').forEach(link => {
+            document.querySelectorAll('.progress-steps a').forEach(link => {
                 link.addEventListener('click', (e) => {
                     if (!link.href || link.href.endsWith('#')) return;
                     e.preventDefault();
@@ -208,5 +198,4 @@
     </script>
 </body>
 </html>
-
 

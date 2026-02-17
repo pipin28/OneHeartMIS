@@ -3,13 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
     <title>Add Members | OneHeart Life Plan</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('css/partials/nav.css') . '?v=' . filemtime(public_path('css/partials/nav.css')) }}">
 </head>
-<body class="has-shell">
+@php
+    $isDraft = $isDraft ?? false;
+@endphp
+<body class="has-shell" data-draft="{{ $isDraft ? '1' : '0' }}">
     <div class="page">
         @include('partials.header')
 
@@ -22,38 +26,73 @@
                     $part1Id = $part1->id ?? null;
                     $part2Id = $part2->id ?? null;
                     $addressId = $address->id ?? null;
+                    $assignmentId = $assignment->id ?? null;
                 @endphp
                 <div class="progress-steps">
-                    <a class="step-pill is-current" href="#">
-                        <input type="radio" name="progress_step" checked aria-hidden="true">
-                        <span>Member Enrollment</span>
-                    </a>
-                    <a class="step-pill is-disabled" href="#">
-                        <input type="radio" name="progress_step" aria-hidden="true">
-                        <span>Member Details</span>
-                    </a>
-                    <a class="step-pill is-disabled" href="#">
-                        <input type="radio" name="progress_step" aria-hidden="true">
-                        <span>Address</span>
-                    </a>
-                    <a class="step-pill is-disabled" href="#">
-                        <input type="radio" name="progress_step" aria-hidden="true">
-                        <span>Beneficiaries</span>
-                    </a>
+                    @if ($isDraft)
+                        <a class="step-pill" href="{{ route('add-members.draft.staff') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Staff Info</span>
+                        </a>
+                        <a class="step-pill is-current" href="#">
+                            <input type="radio" name="progress_step" checked aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
+                        <a class="step-pill" href="{{ route('add-members.draft.part2') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Member Details</span>
+                        </a>
+                        <a class="step-pill" href="{{ route('add-members.draft.address') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Address</span>
+                        </a>
+                        <a class="step-pill" href="{{ route('add-members.draft.beneficiaries') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Beneficiaries</span>
+                        </a>
+                    @else
+                        <a class="step-pill" href="{{ route('add-members.staff', ['assignment' => $assignmentId]) }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Staff Info</span>
+                        </a>
+                        <a class="step-pill is-current" href="#">
+                            <input type="radio" name="progress_step" checked aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
+                        <a class="step-pill is-disabled" href="#">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Member Details</span>
+                        </a>
+                        <a class="step-pill is-disabled" href="#">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Address</span>
+                        </a>
+                        <a class="step-pill is-disabled" href="#">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Beneficiaries</span>
+                        </a>
+                    @endif
                 </div>
                 <div class="eyebrow">Add Members</div>
                 <div class="hero-title hero-small">Member enrollment</div>
                 <p class="hero-sub">Use this screen to onboard new members. Drop in your forms, uploads, and validation messages here.</p>
 
+                @if ($assignment)
+                    <div class="status" style="margin-bottom: 16px;">
+                        <strong>Collector:</strong> {{ $assignment->collector_name }} |
+                        <strong>Agent:</strong> {{ $assignment->agent_name }} |
+                        <strong>Manager:</strong> {{ $assignment->manager_name }}
+                        <a href="{{ route('add-members.staff', ['assignment' => $assignment->id]) }}" class="button is-ghost" style="margin-left: 12px;">Edit staff info</a>
+                    </div>
+                @endif
+
                 @if (session('status'))
                     <div class="status">{{ session('status') }}</div>
                 @endif
-                @if ($errors->any())
-                    <div class="status status-error">{{ $errors->first() }}</div>
-                @endif
 
-                <form method="POST" action="{{ route('add-members.store') }}" class="form-grid">
+                <form method="POST" action="{{ $isDraft ? '#' : route('add-members.store') }}" class="form-grid" id="enrollmentForm">
                     @csrf
+                    <input type="hidden" name="member_assignment_id" value="{{ old('member_assignment_id', $assignmentId ?? '') }}">
                     <div>
                         <label for="user_id">User ID (auto)</label>
                         <input type="number" id="user_id" name="user_id" value="{{ old('user_id', $part1->user_id ?? $nextUserId ?? '') }}" placeholder="123" readonly>
@@ -81,7 +120,7 @@
                     </div>
                     <div>
                         <label for="gross_contact_price">Gross Contract Price</label>
-                        <input type="text" id="gross_contact_price" name="gross_contact_price" value="{{ old('gross_contact_price', $part1->gross_contact_price ?? '') }}" placeholder="30,000" inputmode="decimal" autocomplete="off" required>
+                        <input type="text" id="gross_contact_price" name="gross_contact_price" value="{{ old('gross_contact_price', $part1->gross_contact_price ?? '') }}" placeholder="30,000" inputmode="decimal" autocomplete="off" readonly required>
                     </div>
                     <div>
                         <label for="mode_of_payment">Mode of Payment</label>
@@ -94,20 +133,18 @@
                     </div>
                     <div>
                         <label for="terms_of_payment">Terms of Payment</label>
-                        <select id="terms_of_payment" name="terms_of_payment" data-initial="{{ old('terms_of_payment', $part1->terms_of_payment ?? '') }}" required>
-                            <option value="" disabled {{ old('terms_of_payment', $part1->terms_of_payment ?? '') === '' ? 'selected' : '' }}>Select terms</option>
-                        </select>
+                        <input type="text" id="terms_of_payment" name="terms_of_payment" value="{{ old('terms_of_payment', $part1->terms_of_payment ?? '') }}" readonly required>
                     </div>
                     <div>
                         <label for="due_date">Due Date</label>
-                        <input type="date" id="due_date" name="due_date" value="{{ old('due_date', $part1->due_date ?? \Carbon\Carbon::now()->addYears(5)->toDateString()) }}">
+                        <input type="date" id="due_date" name="due_date" value="{{ old('due_date', $part1->due_date ?? \Carbon\Carbon::now()->addYears(5)->toDateString()) }}" required>
                     </div>
                     <div>
                         <label for="amount">Amount</label>
                         <input type="text" id="amount" name="amount" value="{{ old('amount', $part1->amount ?? '') }}" placeholder="15,000" inputmode="decimal" autocomplete="off" required>
                     </div>
                     <div class="form-actions">
-                        <button type="submit">Save &amp; next</button>
+                        <button type="submit">{{ $isDraft ? 'Next' : 'Save & next' }}</button>
                     </div>
                 </form>
 
@@ -160,6 +197,14 @@
         </div>
     </div>
 
+    <div class="status-modal {{ $errors->any() ? 'is-visible' : '' }}" id="errorModal" data-message="{{ $errors->first() }}">
+        <div class="status-card">
+            <div class="status-title">Error</div>
+            <p class="status-body">{{ $errors->first() }}</p>
+            <button type="button" class="status-close" aria-label="Close">Close</button>
+        </div>
+    </div>
+
     <div id="planData" data-plans='@json($planSettings ?? [])'></div>
 
     <script>
@@ -190,6 +235,79 @@
             }
         })();
         (() => {
+            const modal = document.getElementById('errorModal');
+            const closeBtn = modal?.querySelector('.status-close');
+            const closeModal = () => modal?.classList.remove('is-visible');
+            if (modal && modal.dataset.message) {
+                modal.classList.add('is-visible');
+                closeBtn?.addEventListener('click', closeModal);
+                modal.addEventListener('click', (e) => {
+                    if (e.target === modal) closeModal();
+                });
+            } else {
+                modal?.classList.remove('is-visible');
+            }
+        })();
+        (() => {
+            const isDraft = document.body.dataset.draft === "1";
+            if (!isDraft) return;
+            const DRAFT_KEY = "oneheart_member_draft_v1";
+            const form = document.getElementById('enrollmentForm');
+            const readDraft = () => {
+                try {
+                    return JSON.parse(localStorage.getItem(DRAFT_KEY)) || {};
+                } catch {
+                    return {};
+                }
+            };
+            const writeDraft = (data) => localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+            const getFormValues = (node) => {
+                const data = {};
+                node?.querySelectorAll('input, select, textarea').forEach(el => {
+                    if (!el.name || el.name.endsWith('[]')) return;
+                    if (el.type === 'radio') {
+                        if (el.checked) data[el.name] = el.value;
+                        return;
+                    }
+                    if (el.type === 'checkbox') {
+                        data[el.name] = el.checked ? (el.value || true) : '';
+                        return;
+                    }
+                    data[el.name] = el.value;
+                });
+                return data;
+            };
+            const fillForm = () => {
+                const enrollment = readDraft().enrollment || {};
+                Object.entries(enrollment).forEach(([key, val]) => {
+                    const el = form?.querySelector(`[name="${key}"]`);
+                    if (el && val !== undefined && val !== null) el.value = val;
+                });
+            };
+            const saveDraft = () => {
+                const draft = readDraft();
+                draft.enrollment = { ...(draft.enrollment || {}), ...getFormValues(form) };
+                writeDraft(draft);
+            };
+
+            form?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveDraft();
+                window.location.href = "{{ route('add-members.draft.part2') }}";
+            });
+
+            document.querySelectorAll('.progress-steps a').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    if (!link.href || link.href.endsWith('#')) return;
+                    e.preventDefault();
+                    saveDraft();
+                    window.location.href = link.href;
+                });
+            });
+
+            fillForm();
+        })();
+        (() => {
             const planField = document.getElementById('plan_type');
             const grossField = document.getElementById('gross_contact_price');
             const modeField = document.getElementById('mode_of_payment');
@@ -213,35 +331,16 @@
             };
 
             const termsByMode = {
-                Monthly: ['12 months', '24 months', '36 months', '60 months'],
-                Quarterly: ['4 quarters', '8 quarters', '12 quarters'],
-                'Semi-Annual': ['2 semi-annual', '4 semi-annual', '6 semi-annual'],
-                Annual: ['1 year', '2 years', '3 years'],
-                'One-time': ['One-time']
+                Monthly: '60 months',
+                Quarterly: '20 quarters',
+                'Semi-Annual': '10 simi annual',
+                Annual: '5 years',
+                'One-time': 'Infinite',
             };
 
-            const populateTerms = (mode, selectedValue) => {
+            const populateTerms = (mode) => {
                 if (!termsField) return;
-                const terms = termsByMode[mode] || [];
-                termsField.innerHTML = '';
-                const placeholder = document.createElement('option');
-                placeholder.value = '';
-                placeholder.disabled = true;
-                placeholder.textContent = 'Select terms';
-                termsField.appendChild(placeholder);
-                terms.forEach(term => {
-                    const opt = document.createElement('option');
-                    opt.value = term;
-                    opt.textContent = term;
-                    termsField.appendChild(opt);
-                });
-                const initial = selectedValue || termsField.dataset.initial || '';
-                const nextValue = initial && terms.includes(initial) ? initial : (terms[0] || '');
-                if (nextValue) {
-                    termsField.value = nextValue;
-                } else {
-                    placeholder.selected = true;
-                }
+                termsField.value = termsByMode[mode] || '';
             };
 
             const parsePayments = (terms, mode) => {
@@ -252,10 +351,7 @@
 
             const calcAmount = (plan, mode, terms, grossOverride) => {
                 const meta = plans[plan] || {};
-                const contract = Number(grossOverride || meta.contract_amount || 0);
-                const payments = parsePayments(terms, mode);
-                if (!payments) return contract;
-                return contract / payments;
+                return Number(grossOverride || meta.contract_amount || 0);
             };
 
             const hydrate = (plan) => {
@@ -280,20 +376,18 @@
                 }
 
                 if (termsField) {
-                    termsField.disabled = isLegacy;
+                    termsField.readOnly = true;
                     if (isLegacy) {
-                        populateTerms('One-time', meta.default_terms);
+                        populateTerms('One-time');
                     } else {
-                        populateTerms(modeField?.value || meta.default_mode, meta.default_terms);
+                        populateTerms(modeField?.value || meta.default_mode);
                     }
                 }
 
                 if (dueField) {
-                    dueField.disabled = isLegacy;
-                    dueField.required = !isLegacy;
-                    if (isLegacy) {
-                        dueField.value = '';
-                    } else if (!dueField.value) {
+                    dueField.disabled = false;
+                    dueField.required = true;
+                    if (!dueField.value) {
                         const fiveYears = new Date();
                         fiveYears.setFullYear(fiveYears.getFullYear() + 5);
                         dueField.value = fiveYears.toISOString().slice(0, 10);
@@ -322,7 +416,7 @@
                 }
                 if (!planField?.value) return;
                 if (!amountField) return;
-                populateTerms(modeField.value, termsField?.value || '');
+                populateTerms(modeField.value);
                 const amt = calcAmount(planField.value, modeField.value, termsField?.value || '', parseNumber(grossField?.value || 0));
                 amountField.value = formatNumber(amt);
             });
@@ -342,7 +436,7 @@
             if (planField?.value) {
                 hydrate(planField.value);
             } else if (modeField?.value) {
-                populateTerms(modeField.value, termsField?.value || '');
+                populateTerms(modeField.value);
             }
 
             if (grossField?.value) grossField.value = formatNumber(parseNumber(grossField.value));
@@ -356,3 +450,4 @@
     </script>
 </body>
 </html>
+

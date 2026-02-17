@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
     <title>Payment | OneHeart Life Plan</title>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link rel="preconnect" href="https://fonts.bunny.net">
@@ -26,6 +27,9 @@
                             <div class="card-title">Payment overview</div>
                             <div class="card-subtitle">Latest members first</div>
                         </div>
+                        <div class="table-stats">
+                            <span class="stat-pill soft">Scope: <strong>{{ $scopeLabel ?? 'Role-based' }}</strong></span>
+                        </div>
                     </div>
 
                     @if ($members->isEmpty())
@@ -35,7 +39,7 @@
                         </div>
                     @else
                         <div class="table-scroll">
-                            <table class="data-table modern compact">
+                            <table class="data-table modern compact" id="paymentTable">
                                 <thead>
                                     <tr>
                                         <th>Planholder</th>
@@ -66,6 +70,8 @@
                                                 'overdue' => 'chip chip-muted',
                                                 default => 'chip chip-neutral',
                                             };
+                                            $isFullyPaid = $history->isNotEmpty()
+                                                && $history->every(fn($row) => strtolower($row->status ?? '') === 'paid');
                                         @endphp
                                         <tr data-status="{{ $nextStatus }}">
                                             <td class="table-col-primary">{{ trim($member->first_name . ' ' . ($member->midle_name ?? '') . ' ' . $member->surname) }}</td>
@@ -76,7 +82,9 @@
                                             <td><span class="{{ $nextClass }}">{{ $nextLabel }}</span></td>
                                             <td>
                                                 <div class="action-stack stacked-actions">
-                                                    @if ($nextPayment && $nextStatus !== 'paid')
+                                                    @if ($isFullyPaid)
+                                                        <span class="chip chip-accent">Fully Paid</span>
+                                                    @elseif ($nextPayment && $nextStatus !== 'paid')
                                                         <form method="POST" action="{{ route('payments.pay', ['payment' => $nextPayment->id]) }}" class="inline-form pay-form">
                                                             @csrf
                                                             <input type="hidden" name="reference" value="">
@@ -120,6 +128,17 @@
         </div>
     </div>
 
+    <div class="status-modal" id="paymentConfirmModal" aria-hidden="true">
+        <div class="status-card">
+            <div class="status-title">Confirm</div>
+            <p class="status-body">Are you sure you want to mark as paid?</p>
+            <div class="form-actions" style="justify-content: center; gap: 8px; margin-top: 12px;">
+                <button type="button" class="button" id="paymentConfirmCancel" style="background: #d32f2f; color: #fff; border-color: #d32f2f;">Cancel</button>
+                <button type="button" class="button" id="paymentConfirmYes" style="background: #2e7d32; color: #fff; border-color: #2e7d32;">Yes</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="paymentHistoryModal" aria-hidden="true">
         <div class="modal-card modal-card-wide">
             <div class="modal-head">
@@ -128,6 +147,10 @@
                     <div class="modal-subtitle" id="historySubtitle"></div>
                 </div>
                 <div class="modal-head-actions">
+                    <div class="button-group" role="group" aria-label="Filter ledger">
+                        <button type="button" class="button is-ghost payment-filter is-active" data-filter="pending">Pending</button>
+                        <button type="button" class="button is-ghost payment-filter" data-filter="paid">Paid</button>
+                    </div>
                     <button type="button" class="modal-close" aria-label="Close">&times;</button>
                 </div>
             </div>
@@ -137,6 +160,8 @@
                         <tr>
                             <th>Due Date</th>
                             <th>Amount</th>
+                            <th>Deductions</th>
+                            <th>Net</th>
                             <th>Status</th>
                             <th>Paid At</th>
                             <th>Reference</th>
@@ -155,9 +180,25 @@
         (() => {
             const successModal = document.getElementById('paymentSuccessModal');
             const successClose = successModal?.querySelector('.status-close');
+            const confirmModal = document.getElementById('paymentConfirmModal');
+            const confirmCancel = document.getElementById('paymentConfirmCancel');
+            const confirmYes = document.getElementById('paymentConfirmYes');
             const historyModal = document.getElementById('paymentHistoryModal');
             const historyTableBody = document.querySelector('#historyTable tbody');
             const historySubtitle = document.getElementById('historySubtitle');
+            const filterButtons = document.querySelectorAll('.payment-filter');
+            let currentFilter = 'pending';
+            let pendingForm = null;
+
+            const applyFilter = (filter) => {
+                if (!historyTableBody) return;
+                const rows = historyTableBody.querySelectorAll('tr[data-status]');
+                if (!rows.length) return;
+                rows.forEach(row => {
+                    const status = row.dataset.status || '';
+                    row.style.display = status === filter ? '' : 'none';
+                });
+            };
 
             const maybeShowStatus = () => {
                 if (successModal?.dataset.message) {
@@ -177,26 +218,56 @@
                 if (e.target === successModal) closeSuccess();
             });
 
+            const openConfirm = (form) => {
+                pendingForm = form;
+                confirmModal?.classList.add('is-visible');
+                confirmModal?.setAttribute('aria-hidden', 'false');
+            };
+
+            const closeConfirm = () => {
+                pendingForm = null;
+                confirmModal?.classList.remove('is-visible');
+                confirmModal?.setAttribute('aria-hidden', 'true');
+            };
+
+            confirmCancel?.addEventListener('click', closeConfirm);
+            confirmModal?.addEventListener('click', (e) => {
+                if (e.target === confirmModal) closeConfirm();
+            });
+            confirmYes?.addEventListener('click', () => {
+                if (pendingForm) pendingForm.submit();
+                closeConfirm();
+            });
+
             const renderHistory = (rows = []) => {
                 if (!historyTableBody) return;
                 if (!rows.length) {
-                    historyTableBody.innerHTML = '<tr><td colspan="5" class="muted text-center">No payments yet.</td></tr>';
+                    historyTableBody.innerHTML = '<tr><td colspan="7" class="muted text-center">No payments yet.</td></tr>';
                     return;
                 }
-                historyTableBody.innerHTML = rows.map(r => {
+                const toTime = (value) => {
+                    if (!value) return Number.MAX_SAFE_INTEGER;
+                    const time = Date.parse(value);
+                    return Number.isNaN(time) ? Number.MAX_SAFE_INTEGER : time;
+                };
+                const sortedRows = [...rows].sort((a, b) => toTime(a.due_date) - toTime(b.due_date));
+                historyTableBody.innerHTML = sortedRows.map(r => {
                     const status = (r.status || '').toLowerCase();
                     const label = status === 'paid' ? 'Paid' : (status === 'overdue' ? 'Overdue' : 'Pending');
                     const cls = status === 'paid' ? 'chip chip-accent' : (status === 'overdue' ? 'chip chip-muted' : 'chip chip-neutral');
                     return `
-                        <tr>
+                        <tr data-status="${status === 'overdue' ? 'pending' : status}">
                             <td>${r.due_date || '-'}</td>
                             <td class="text-right">${r.amount ? Number(r.amount).toLocaleString(undefined,{minimumFractionDigits:2}) : '-'}</td>
+                            <td class="text-right">${r.insurance_total ? Number(r.insurance_total).toLocaleString(undefined,{minimumFractionDigits:2}) : '-'}</td>
+                            <td class="text-right">${r.net_amount ? Number(r.net_amount).toLocaleString(undefined,{minimumFractionDigits:2}) : '-'}</td>
                             <td><span class="${cls}">${label}</span></td>
                             <td>${r.paid_at || '-'}</td>
                             <td>${r.reference || '-'}</td>
                         </tr>
                     `;
                 }).join('');
+                applyFilter(currentFilter);
             };
 
             document.querySelectorAll('.payment-history-trigger').forEach(btn => {
@@ -210,6 +281,13 @@
                 });
             });
 
+            document.querySelectorAll('.pay-form').forEach(form => {
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    openConfirm(form);
+                });
+            });
+
             historyModal?.addEventListener('click', (e) => {
                 if (e.target === historyModal || e.target.classList.contains('modal-close')) {
                     historyModal.classList.remove('is-visible');
@@ -217,8 +295,18 @@
                 }
             });
 
+            filterButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterButtons.forEach(b => b.classList.remove('is-active'));
+                    btn.classList.add('is-active');
+                    currentFilter = btn.dataset.filter || 'pending';
+                    applyFilter(currentFilter);
+                });
+            });
+
             maybeShowStatus();
         })();
     </script>
 </body>
 </html>
+

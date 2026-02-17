@@ -1,15 +1,19 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
     <title>Add Members - Member Details | OneHeart Life Plan</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
     <link rel="stylesheet" href="{{ asset('css/app.css') }}">
     <link rel="stylesheet" href="{{ asset('css/partials/nav.css') . '?v=' . filemtime(public_path('css/partials/nav.css')) }}">
 </head>
-<body class="has-shell">
+@php
+    $isDraft = $isDraft ?? false;
+@endphp
+<body class="has-shell" data-draft="{{ $isDraft ? '1' : '0' }}">
     <div class="page">
         @include('partials.header')
 
@@ -19,27 +23,55 @@
                     $hasPart2 = !empty($part2?->id);
                     $addressId = $address->id ?? null;
                     $beneficiaryId = $beneficiary->id ?? null;
+                    $assignmentId = $assignment->id ?? null;
                 @endphp
                 <div class="progress-steps">
-                    <a class="step-pill is-disabled" href="#">
-                        <input type="radio" name="progress_step" aria-hidden="true">
-                        <span>Member Enrollment</span>
-                    </a>
-                    <a class="step-pill is-current" href="#">
-                        <input type="radio" name="progress_step" checked aria-hidden="true">
-                        <span>Member Details</span>
-                    </a>
-                    <a class="step-pill is-disabled" href="#">
-                        <input type="radio" name="progress_step" aria-hidden="true">
-                        <span>Address</span>
-                    </a>
-                    <a class="step-pill is-disabled" href="#">
-                        <input type="radio" name="progress_step" aria-hidden="true">
-                        <span>Beneficiaries</span>
-                    </a>
+                    @if ($isDraft)
+                        <a class="step-pill" href="{{ route('add-members.draft.staff') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Staff Info</span>
+                        </a>
+                        <a class="step-pill" href="{{ route('add-members.draft.enrollment') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
+                        <a class="step-pill is-current" href="#">
+                            <input type="radio" name="progress_step" checked aria-hidden="true">
+                            <span>Member Details</span>
+                        </a>
+                        <a class="step-pill" href="{{ route('add-members.draft.address') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Address</span>
+                        </a>
+                        <a class="step-pill" href="{{ route('add-members.draft.beneficiaries') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Beneficiaries</span>
+                        </a>
+                    @else
+                        <a class="step-pill {{ $assignmentId ? '' : 'is-disabled' }}" href="{{ $assignmentId ? route('add-members.staff', ['assignment' => $assignmentId]) : '#' }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Staff Info</span>
+                        </a>
+                        <a class="step-pill" href="{{ route('add-members.edit', ['part1' => $part1Id]) }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
+                        <a class="step-pill is-current" href="#">
+                            <input type="radio" name="progress_step" checked aria-hidden="true">
+                            <span>Member Details</span>
+                        </a>
+                        <a class="step-pill is-disabled" href="#">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Address</span>
+                        </a>
+                        <a class="step-pill is-disabled" href="#">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Beneficiaries</span>
+                        </a>
+                    @endif
                 </div>
                 <div class="form-actions" style="justify-content: flex-start; margin-bottom: 8px;">
-                    <a href="{{ route('add-members.edit', ['part1' => $part1Id]) }}" class="button" style="box-shadow: none;">Back to Member Enrollment</a>
+                    <a href="{{ $isDraft ? route('add-members.draft.enrollment') : route('add-members.edit', ['part1' => $part1Id]) }}" class="button" style="box-shadow: none;">Back to Member Enrollment</a>
                 </div>
                 <div class="eyebrow">Add Members</div>
                 <div class="hero-title hero-small">Member Details</div>
@@ -52,10 +84,12 @@
                     <div class="status status-error">{{ $errors->first() }}</div>
                 @endif
 
-                <form method="POST" action="{{ route('add-members.part2.store', $part1Id) }}" class="form-grid">
+                <form method="POST" action="{{ $isDraft ? '#' : route('add-members.part2.store', $part1Id) }}" class="form-grid" id="memberDetailsForm">
                     @csrf
-                    <input type="hidden" name="part1_id" value="{{ $part1Id }}">
-                    <input type="hidden" name="part2_id" value="{{ $part2->id ?? '' }}">
+                    @if (! $isDraft)
+                        <input type="hidden" name="part1_id" value="{{ $part1Id }}">
+                        <input type="hidden" name="part2_id" value="{{ $part2->id ?? '' }}">
+                    @endif
                     <div>
                         <label for="surname">Surname</label>
                         <input type="text" id="surname" name="surname" value="{{ old('surname', $part2->surname ?? '') }}" required>
@@ -135,7 +169,7 @@
                         <input type="number" id="office_no" name="office_no" value="{{ old('office_no', $part2->office_no ?? '') }}" required>
                     </div>
                     <div class="form-actions">
-                        <button type="submit">Save member details</button>
+                        <button type="submit">{{ $isDraft ? 'Next' : 'Save member details' }}</button>
                     </div>
                 </form>
             </section>
@@ -201,6 +235,66 @@
                 if (!age.value) age.value = v;
             }
         })();
+        (() => {
+            const isDraft = document.body.dataset.draft === "1";
+            if (!isDraft) return;
+            const DRAFT_KEY = "oneheart_member_draft_v1";
+            const form = document.getElementById('memberDetailsForm');
+            const readDraft = () => {
+                try {
+                    return JSON.parse(localStorage.getItem(DRAFT_KEY)) || {};
+                } catch {
+                    return {};
+                }
+            };
+            const writeDraft = (data) => localStorage.setItem(DRAFT_KEY, JSON.stringify(data));
+            const getFormValues = (node) => {
+                const data = {};
+                node?.querySelectorAll('input, select, textarea').forEach(el => {
+                    if (!el.name || el.name.endsWith('[]')) return;
+                    if (el.type === 'radio') {
+                        if (el.checked) data[el.name] = el.value;
+                        return;
+                    }
+                    if (el.type === 'checkbox') {
+                        data[el.name] = el.checked ? (el.value || true) : '';
+                        return;
+                    }
+                    data[el.name] = el.value;
+                });
+                return data;
+            };
+            const fillForm = () => {
+                const member = readDraft().member || {};
+                Object.entries(member).forEach(([key, val]) => {
+                    const el = form?.querySelector(`[name="${key}"]`);
+                    if (el && val !== undefined && val !== null) el.value = val;
+                });
+            };
+            const saveDraft = () => {
+                const draft = readDraft();
+                draft.member = { ...(draft.member || {}), ...getFormValues(form) };
+                writeDraft(draft);
+            };
+
+            form?.addEventListener('submit', (e) => {
+                e.preventDefault();
+                saveDraft();
+                window.location.href = "{{ route('add-members.draft.address') }}";
+            });
+
+            document.querySelectorAll('.progress-steps a, .form-actions a').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    if (!link.href || link.href.endsWith('#')) return;
+                    e.preventDefault();
+                    saveDraft();
+                    window.location.href = link.href;
+                });
+            });
+
+            fillForm();
+        })();
     </script>
 </body>
 </html>
+
