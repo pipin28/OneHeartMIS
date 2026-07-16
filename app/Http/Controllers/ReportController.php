@@ -13,6 +13,108 @@ class ReportController extends Controller
 {
     public function index(Request $request)
     {
+        $reportDate = $this->resolveDailyReportDate($request);
+        [$part1s, $scopeLabel] = $this->resolveScopedPart1s($request);
+        $part1Ids = $part1s->keys()->all();
+
+        $paidRows = empty($part1Ids)
+            ? collect()
+            : DB::table('payments')
+                ->leftJoin('part1s', 'part1s.id', '=', 'payments.part1_id')
+                ->leftJoin('part2s', 'part2s.part1_id', '=', 'payments.part1_id')
+                ->leftJoin('member_assignments', 'member_assignments.id', '=', 'part1s.member_assignment_id')
+                ->leftJoin('users as added_by_user', 'added_by_user.id', '=', DB::raw('COALESCE(part1s.added_by_user_id, part1s.created_by_user_id)'))
+                ->whereIn('payments.part1_id', $part1Ids)
+                ->where('payments.status', 'paid')
+                ->whereNotNull('payments.paid_at')
+                ->whereDate('payments.paid_at', $reportDate->toDateString())
+                ->orderBy('payments.paid_at')
+                ->orderBy('payments.id')
+                ->get([
+                    'payments.id',
+                    'payments.part1_id',
+                    'payments.due_date',
+                    'payments.amount',
+                    'payments.insurance_total',
+                    'payments.net_amount',
+                    'payments.paid_at',
+                    'payments.reference',
+                    'payments.payment_type',
+                    'part1s.reference_number',
+                    'part1s.plan_type',
+                    'part1s.mode_of_payment',
+                    'part1s.terms_of_payment',
+                    'added_by_user.name as added_by_name',
+                    'part2s.surname',
+                    'part2s.first_name',
+                    'part2s.midle_name',
+                    'member_assignments.agent_name',
+                    'member_assignments.manager_name',
+                ])
+                ->unique('id')
+                ->values();
+
+        $detailRows = $paidRows->map(function ($row) {
+            $gross = (float) $row->amount;
+            $deductions = (float) ($row->insurance_total ?? 0);
+            $net = $row->net_amount !== null ? (float) $row->net_amount : max(0, $gross - $deductions);
+            $name = trim(($row->first_name ?? '') . ' ' . ($row->midle_name ?? '') . ' ' . ($row->surname ?? ''));
+
+            return [
+                'time' => $row->paid_at ? Carbon::parse($row->paid_at)->format('h:i A') : '-',
+                'paid_at' => $row->paid_at,
+                'member' => $name !== '' ? $name : 'Member #' . $row->part1_id,
+                'reference_number' => $row->reference_number ?: '-',
+                'added_by' => $row->added_by_name ?: '-',
+                'payment_reference' => $row->reference ?: '-',
+                'payment_type' => $this->formatPaymentTypeLabel($row->payment_type),
+                'plan_type' => $row->plan_type ?: '-',
+                'mode_of_payment' => $row->mode_of_payment ?: '-',
+                'agent' => $row->agent_name ?: '-',
+                'manager' => $row->manager_name ?: '-',
+                'gross' => round($gross, 2),
+                'deductions' => round($deductions, 2),
+                'net' => round($net, 2),
+            ];
+        });
+
+        $typeTotals = $detailRows
+            ->groupBy('payment_type')
+            ->map(function (Collection $rows, string $type) {
+                return [
+                    'type' => $type,
+                    'count' => $rows->count(),
+                    'gross' => round((float) $rows->sum('gross'), 2),
+                    'deductions' => round((float) $rows->sum('deductions'), 2),
+                    'net' => round((float) $rows->sum('net'), 2),
+                ];
+            })
+            ->sortBy('type')
+            ->values();
+
+        $summary = [
+            'transactions' => $detailRows->count(),
+            'gross' => round((float) $detailRows->sum('gross'), 2),
+            'deductions' => round((float) $detailRows->sum('deductions'), 2),
+            'net' => round((float) $detailRows->sum('net'), 2),
+        ];
+
+        $subscriberModes = $this->buildSubscriberModeCounts($part1s);
+
+        return view('report', [
+            'reportDate' => $reportDate->toDateString(),
+            'reportDateLabel' => $reportDate->format('F d, Y'),
+            'scopeLabel' => $scopeLabel,
+            'lastUpdated' => now()->format('M d, Y h:i A'),
+            'summary' => $summary,
+            'typeTotals' => $typeTotals,
+            'detailRows' => $detailRows,
+            'subscriberModes' => $subscriberModes,
+        ]);
+    }
+
+    public function oldIndex(Request $request)
+    {
         [$startDate, $endDate, $preset] = $this->resolveDateRange($request);
         [$part1s, $scopeLabel] = $this->resolveScopedPart1s($request);
         $part1Ids = $part1s->keys()->all();
@@ -188,11 +290,13 @@ class ReportController extends Controller
                 'Status',
                 'Member',
                 'Plan Type',
-                'Mode of Payment',
+                'Contribution',
                 'Terms',
-                'Collector',
+                'Unit Name',
                 'Agent',
-                'Manager',
+                'Unit Manager',
+                'Sales Associate',
+                'Contact',
                 'Amount',
                 'Deductions',
                 'Net',
@@ -211,9 +315,11 @@ class ReportController extends Controller
                     $part1->plan_type ?? '-',
                     $part1->mode_of_payment ?? '-',
                     $part1->terms_of_payment ?? '-',
-                    $assignment->collector_name ?? '-',
+                    $assignment->unit_name ?? '-',
                     $assignment->agent_name ?? '-',
                     $assignment->manager_name ?? '-',
+                    $assignment->sales_associate ?? '-',
+                    $assignment->staff_contact ?? '-',
                     number_format((float) $row->amount, 2, '.', ''),
                     number_format((float) ($row->insurance_total ?? 0), 2, '.', ''),
                     number_format((float) ($row->net_amount ?? $row->amount), 2, '.', ''),
@@ -223,6 +329,58 @@ class ReportController extends Controller
 
             fclose($handle);
         }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    private function resolveDailyReportDate(Request $request): Carbon
+    {
+        $date = $request->query('date');
+
+        if ($date) {
+            return Carbon::parse($date)->startOfDay();
+        }
+
+        return Carbon::today();
+    }
+
+    private function formatPaymentTypeLabel(?string $paymentType): string
+    {
+        return match (strtolower((string) ($paymentType ?: 'regular'))) {
+            'registration_renewal' => 'Registration / Renewal',
+            'contestability' => 'Contestability Fee',
+            default => 'Contribution',
+        };
+    }
+
+    private function buildSubscriberModeCounts(Collection $part1s): array
+    {
+        $counts = [
+            'monthly' => 0,
+            'quarterly' => 0,
+            'semi_annual' => 0,
+            'annual' => 0,
+        ];
+
+        foreach ($part1s as $part1) {
+            $mode = strtolower(trim((string) ($part1->mode_of_payment ?? '')));
+            $key = match ($mode) {
+                'monthly' => 'monthly',
+                'quarterly' => 'quarterly',
+                'semi-annual', 'semi annual', 'semiannual' => 'semi_annual',
+                'annual', 'yearly' => 'annual',
+                default => null,
+            };
+
+            if ($key) {
+                $counts[$key]++;
+            }
+        }
+
+        return [
+            ['label' => 'Monthly', 'count' => $counts['monthly']],
+            ['label' => 'Quarterly', 'count' => $counts['quarterly']],
+            ['label' => 'Semi-Annual', 'count' => $counts['semi_annual']],
+            ['label' => 'Annual', 'count' => $counts['annual']],
+        ];
     }
 
     private function resolveDateRange(Request $request): array
@@ -253,7 +411,7 @@ class ReportController extends Controller
         $query = DB::table('part1s');
         $scopeLabel = 'All records';
 
-        if (in_array($role, ['collector', 'agent', 'manager'], true)) {
+        if (in_array($role, ['agent', 'manager'], true)) {
             $column = $role . '_user_id';
             $assignmentIds = DB::table('member_assignments')
                 ->where($column, $userId)
@@ -275,7 +433,6 @@ class ReportController extends Controller
     private function buildDeductionSummary(Collection $paidInRange): array
     {
         $roles = [
-            'collector' => 0.0,
             'agent' => 0.0,
             'manager' => 0.0,
             'others' => 0.0,
@@ -396,14 +553,13 @@ class ReportController extends Controller
         Carbon $asOf
     ): array {
         $roles = [
-            'collector' => 'collector_user_id',
             'agent' => 'agent_user_id',
             'manager' => 'manager_user_id',
         ];
 
         $assignmentIds = $part1s->pluck('member_assignment_id')->filter()->unique()->values();
         if ($assignmentIds->isEmpty()) {
-            return ['collector' => collect(), 'agent' => collect(), 'manager' => collect()];
+            return ['agent' => collect(), 'manager' => collect()];
         }
 
         $assignments = DB::table('member_assignments')->whereIn('id', $assignmentIds)->get()->keyBy('id');

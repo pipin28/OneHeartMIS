@@ -60,7 +60,7 @@ class AuthController extends Controller
             'role' => $data['role'],
         ]);
 
-        return Redirect::route('register')->with('status', 'Account created successfully.');
+        return Redirect::route('register')->with('status', 'Registered successfully!');
     }
 
     public function logout(Request $request)

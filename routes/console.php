@@ -9,4 +9,5 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('payments:sync-status')->hourly();
+Schedule::command('members:sync-age-pricing')->dailyAt('00:00');
 Schedule::command('backup:database')->dailyAt('23:30');

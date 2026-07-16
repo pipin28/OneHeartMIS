@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
-    <title>Add Members - Address | OneHeart Life Plan</title>
+    <link rel="icon" type="image/png" href="{{ $appBrandLogoUrl }}">
+    <title>Add Members - Address | {{ $appBrandName }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') . '?v=' . filemtime(public_path('css/app.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/partials/nav.css') . '?v=' . filemtime(public_path('css/partials/nav.css')) }}">
 </head>
 @php
@@ -29,10 +29,6 @@
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Staff Info</span>
                         </a>
-                        <a class="step-pill" href="{{ route('add-members.draft.enrollment') }}">
-                            <input type="radio" name="progress_step" aria-hidden="true">
-                            <span>Member Enrollment</span>
-                        </a>
                         <a class="step-pill" href="{{ route('add-members.draft.part2') }}">
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Member Details</span>
@@ -45,14 +41,14 @@
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Beneficiaries</span>
                         </a>
+                        <a class="step-pill" href="{{ route('add-members.draft.enrollment') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
                     @else
                         <a class="step-pill {{ $assignmentId ? '' : 'is-disabled' }}" href="{{ $assignmentId ? route('add-members.staff', ['assignment' => $assignmentId]) : '#' }}">
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Staff Info</span>
-                        </a>
-                        <a class="step-pill" href="{{ route('add-members.edit', ['part1' => $part1Id]) }}">
-                            <input type="radio" name="progress_step" aria-hidden="true">
-                            <span>Member Enrollment</span>
                         </a>
                         <a class="step-pill" href="{{ route('add-members.part2', ['part1' => $part1Id]) . '?part2=' . $part2Id }}">
                             <input type="radio" name="progress_step" aria-hidden="true">
@@ -66,6 +62,10 @@
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Beneficiaries</span>
                         </a>
+                        <a class="step-pill" href="{{ route('add-members.edit', ['part1' => $part1Id]) }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
                     @endif
                 </div>
                 <div class="form-actions" style="justify-content: flex-start; margin-bottom: 8px;">
@@ -73,7 +73,7 @@
                 </div>
                 <div class="eyebrow">Add Members</div>
                 <div class="hero-title hero-small">Residential address</div>
-                <p class="hero-sub">Finalize enrollment with the member's address and identification details.</p>
+               
 
                 @if (session('status'))
                     <div class="status">{{ session('status') }}</div>
@@ -90,40 +90,28 @@
                     @endif
 
                     <div>
-                        <label for="lot_house_numer">Lot/House Number</label>
-                        <input type="text" id="lot_house_numer" name="lot_house_numer" value="{{ old('lot_house_numer', $address->lot_house_numer ?? '') }}" required>
-                    </div>
-                    <div>
-                        <label for="street">Street</label>
-                        <input type="text" id="street" name="street" value="{{ old('street', $address->street ?? '') }}" required>
-                    </div>
-                    <div>
-                        <label for="barangay">Barangay</label>
-                        <input type="text" id="barangay" name="barangay" value="{{ old('barangay', $address->barangay ?? '') }}" required>
-                    </div>
-                    <div>
-                        <label for="province">Province</label>
-                        <input type="text" id="province" name="province" value="{{ old('province', $address->province ?? '') }}" required>
-                    </div>
-                    <div>
-                        <label for="zip_code">Zip Code</label>
-                        <input type="text" id="zip_code" name="zip_code" value="{{ old('zip_code', $address->zip_code ?? '') }}" required>
+                        <label for="complete_address">Complete Address</label>
+                        <input type="text" id="complete_address" name="complete_address" value="{{ old('complete_address', $address->complete_address ?? '') }}" required>
                     </div>
                     <div>
                         <label for="contact_no">Contact No.</label>
                         <input type="text" id="contact_no" name="contact_no" value="{{ old('contact_no', $address->contact_no ?? '') }}" required>
                     </div>
                     <div>
-                        <label for="sss_gsis_no">SSS/GSIS No.</label>
-                        <input type="text" id="sss_gsis_no" name="sss_gsis_no" value="{{ old('sss_gsis_no', $address->sss_gsis_no ?? '') }}" required>
+                        <label for="religion">Religion</label>
+                        <input type="text" id="religion" name="religion" value="{{ old('religion', $address->religion ?? '') }}" required>
                     </div>
                     <div>
-                        <label for="tin_no">TIN No.</label>
-                        <input type="text" id="tin_no" name="tin_no" value="{{ old('tin_no', $address->tin_no ?? '') }}" required>
+                        <label for="occupation_livelihood">Occupation/Livelihood</label>
+                        <input type="text" id="occupation_livelihood" name="occupation_livelihood" value="{{ old('occupation_livelihood', $address->occupation_livelihood ?? '') }}" required>
                     </div>
                     <div>
-                        <label for="source_of_funds_if_not_imployed">Source of Funds (if not employed)</label>
-                        <input type="text" id="source_of_funds_if_not_imployed" name="source_of_funds_if_not_imployed" value="{{ old('source_of_funds_if_not_imployed', $address->source_of_funds_if_not_imployed ?? '') }}" required>
+                        <label for="valid_id">Valid ID</label>
+                        <input type="text" id="valid_id" name="valid_id" value="{{ old('valid_id', $address->valid_id ?? '') }}" required>
+                    </div>
+                    <div>
+                        <label for="valid_id_no">Valid ID #</label>
+                        <input type="text" id="valid_id_no" name="valid_id_no" value="{{ old('valid_id_no', $address->valid_id_no ?? '') }}" required>
                     </div>
                     <div class="form-actions">
                         <button type="submit">{{ $isDraft ? 'Next' : 'Save address' }}</button>
@@ -208,5 +196,4 @@
     </script>
 </body>
 </html>
-
 

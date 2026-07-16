@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
-    <title>Settings | OneHeart Life Plan</title>
+    <link rel="icon" type="image/png" href="{{ $appBrandLogoUrl }}">
+    <title>Settings | {{ $appBrandName }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') . '?v=' . filemtime(public_path('css/app.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/partials/nav.css') . '?v=' . filemtime(public_path('css/partials/nav.css')) }}">
     <style>
         .settings-modal .modal-card {
@@ -16,6 +16,9 @@
         }
         .settings-modal.is-visible .modal-card {
             animation: settingsModalPop 0.22s ease-out;
+        }
+        .plan-actions {
+            display: none;
         }
         @keyframes settingsModalPop {
             from {
@@ -52,7 +55,7 @@
         <main class="dashboard">
             <section class="wrap">
                 <div class="eyebrow">Settings</div>
-                <div class="hero-title hero-small">Plan &amp; service settings</div>
+                <div class="hero-title hero-small">Age category settings</div>
 
                 
                
@@ -90,58 +93,37 @@
                     <div class="status status-error">{{ $errors->first() }}</div>
                 @endif
 
+
+
                 <form method="POST" action="{{ route('settings.update') }}" class="form-grid">
                     @csrf
+                    <div>
+                        <label for="registration_fee">Registration Fee</label>
+                        <input type="text" id="registration_fee" name="registration_fee" value="{{ old('registration_fee', $registrationFee ?? 300) }}" placeholder="300" inputmode="decimal" autocomplete="off" required>
+                    </div>
+                    <div>
+                        <label for="renewal_fee">Renewal Fee</label>
+                        <input type="text" id="renewal_fee" name="renewal_fee" value="{{ old('renewal_fee', $renewalFee ?? 300) }}" placeholder="300" inputmode="decimal" autocomplete="off" required>
+                    </div>
+                    <div>
+                        <label for="contestability_fee">Contestability Fee</label>
+                        <input type="text" id="contestability_fee" name="contestability_fee" value="{{ old('contestability_fee', $contestabilityFee ?? 0) }}" placeholder="0" inputmode="decimal" autocomplete="off" required>
+                    </div>
                     <div class="data-table" style="grid-column: 1 / -1;">
                         <div class="table-scroll">
                             <table>
                                 <thead>
                                     <tr>
-                                        <th>Plan / Service</th>
-                                        <th>Contract Amount</th>
-                                        <th>Legacy Monthly Amount</th>
-                                        <th>Premium Amount</th>
-                                        <th>Default Mode</th>
-                                        <th>Default Terms</th>
-                                        <th>Default Months</th>
+                                        <th>Age Category</th>
+                                        <th>Member Contribution</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach ($plans as $name => $meta)
-                                        @php
-                                            $isLegacyPlan = strtolower($name) === 'legacy care';
-                                        @endphp
                                         <tr>
                                             <td class="table-col-primary">{{ $name }}</td>
                                             <td>
-                                                <input type="text" name="plans[{{ $name }}][contract_amount]" value="{{ old('plans.' . $name . '.contract_amount', $meta['contract_amount']) }}" placeholder="30,000" inputmode="decimal" autocomplete="off" required>
-                                            </td>
-                                            <td>
-                                                <input
-                                                    type="text"
-                                                    name="plans[{{ $name }}][legacy_monthly_amount]"
-                                                    value="{{ old('plans.' . $name . '.legacy_monthly_amount', $meta['legacy_monthly_amount'] ?? '') }}"
-                                                    placeholder="{{ $isLegacyPlan ? '500' : '-' }}"
-                                                    inputmode="decimal"
-                                                    autocomplete="off"
-                                                    {{ $isLegacyPlan ? '' : 'readonly' }}
-                                                >
-                                            </td>
-                                            <td>
-                                                <input type="text" name="plans[{{ $name }}][premium_amount]" value="{{ old('plans.' . $name . '.premium_amount', $meta['premium_amount']) }}" placeholder="500" inputmode="decimal" autocomplete="off" readonly>
-                                            </td>
-                                            <td>
-                                                <select name="plans[{{ $name }}][default_mode]" required>
-                                                    @foreach (['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'One-time'] as $mode)
-                                                        <option value="{{ $mode }}" {{ old('plans.' . $name . '.default_mode', $meta['default_mode']) === $mode ? 'selected' : '' }}>{{ $mode }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </td>
-                                            <td>
-                                                <input type="text" name="plans[{{ $name }}][default_terms]" value="{{ old('plans.' . $name . '.default_terms', $meta['default_terms']) }}" required>
-                                            </td>
-                                            <td>
-                                                <input type="number" name="plans[{{ $name }}][default_months]" value="{{ old('plans.' . $name . '.default_months', $meta['default_months']) }}" min="1" required>
+                                                <input type="text" name="plans[{{ $name }}][contract_amount]" value="{{ old('plans.' . $name . '.contract_amount', $meta['contract_amount']) }}" placeholder="100" inputmode="decimal" autocomplete="off" required>
                                             </td>
                                         </tr>
                                     @endforeach
@@ -155,7 +137,7 @@
                 </form>
 
                 @php
-                    $roles = ['collector' => 'Collector', 'agent' => 'Agent', 'manager' => 'Manager', 'others' => 'Others'];
+                    $roles = ['agent' => 'Agent', 'manager' => 'Manager', 'others' => 'Others'];
                     $modeSlugs = [
                         'Monthly' => 'monthly',
                         'Quarterly' => 'quarterly',
@@ -295,9 +277,37 @@
             </section>
         </main>
 
+        <div class="card" style="margin-bottom: 14px;">
+                    <div class="card-header table-toolbar">
+                        <div>
+                            <div class="card-title">Branding</div>
+                            <div class="card-subtitle">Update company name and logo used in login, header, and dashboard.</div>
+                        </div>
+                    </div>
+                    <form method="POST" action="{{ route('settings.branding.update') }}" enctype="multipart/form-data" class="form-grid">
+                        @csrf
+                        <div>
+                            <label for="company_name">Company Name</label>
+                            <input type="text" id="company_name" name="company_name" value="{{ old('company_name', $appBrandName) }}" placeholder="Company name" required>
+                        </div>
+                        <div>
+                            <label for="company_logo">Company Logo</label>
+                            <input type="file" id="company_logo" name="company_logo" accept="image/png,image/jpeg,image/jpg,image/webp">
+                        </div>
+                        <div style="display:flex; align-items:flex-end; gap:10px;">
+                            <img src="{{ $appBrandLogoUrl }}" alt="Current company logo" style="width:48px;height:48px;object-fit:contain;border-radius:10px;border:1px solid rgba(0,0,0,.08);background:#fff;padding:4px;">
+                            <div class="hero-sub" style="font-size:13px;">Current logo</div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="button is-primary">Save branding</button>
+                        </div>
+                    </form>
+                </div>
+
         @include('partials.footer')
     </div>
 
+    {{--
     <div class="modal-overlay" id="planModal" aria-hidden="true">
         <div class="modal-card modal-card-narrow">
             <div class="modal-head">
@@ -322,7 +332,7 @@
                     <input type="text" id="plan_legacy_monthly_amount" name="legacy_monthly_amount" placeholder="500" inputmode="decimal" autocomplete="off">
                 </div>
                 <div>
-                    <label for="plan_default_mode">Default Mode</label>
+                    <label for="plan_default_mode">Default Contribution</label>
                     <select id="plan_default_mode" name="default_mode" required>
                         @foreach (['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'One-time'] as $mode)
                             <option value="{{ $mode }}">{{ $mode }}</option>
@@ -402,7 +412,7 @@
                     <input type="text" id="update_plan_legacy_monthly_amount" name="legacy_monthly_amount" placeholder="500" inputmode="decimal" autocomplete="off">
                 </div>
                 <div>
-                    <label for="update_plan_default_mode">Default Mode</label>
+                    <label for="update_plan_default_mode">Default Contribution</label>
                     <select id="update_plan_default_mode" name="default_mode" required>
                         @foreach (['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'One-time'] as $mode)
                             <option value="{{ $mode }}">{{ $mode }}</option>
@@ -450,6 +460,8 @@
             </form>
         </div>
     </div>
+
+    --}}
 
     <script>
     (() => {
@@ -580,6 +592,11 @@
         const rows = document.querySelectorAll('tbody tr');
         const form = document.querySelector('form.form-grid');
         const modalForm = document.querySelector('#planModal form');
+        const systemFeeFields = [
+            document.getElementById('registration_fee'),
+            document.getElementById('renewal_fee'),
+            document.getElementById('contestability_fee'),
+        ].filter(Boolean);
         const stripCommas = (value) => (value || '').toString().replace(/,/g, '');
         const parseNumber = (value) => {
             const cleaned = stripCommas(value).replace(/[^0-9.]/g, '');
@@ -642,7 +659,18 @@
         });
 
         if (form) {
+            systemFeeFields.forEach(input => {
+                if (input.value) {
+                    input.value = formatNumber(parseNumber(input.value));
+                }
+                input.addEventListener('input', () => {
+                    input.value = formatNumber(parseNumber(input.value));
+                });
+            });
             form.addEventListener('submit', () => {
+                systemFeeFields.forEach(input => {
+                    input.value = stripCommas(input.value);
+                });
                 form.querySelectorAll('input[name*="[contract_amount]"]').forEach(input => {
                     input.value = stripCommas(input.value);
                 });
@@ -697,4 +725,3 @@
     </script>
 </body>
 </html>
-

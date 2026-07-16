@@ -10,7 +10,6 @@
         $role = auth()->user()->role ?? null;
         $isEncoder = $role === 'encoder';
         $isAdmin = $role === 'admin';
-        $isCollector = $role === 'collector';
         $isAgent = $role === 'agent';
         $isManager = $role === 'manager';
     @endphp
@@ -29,23 +28,43 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>
                 SHOW MEMBERS
             </a>
+            <a href="{{ route('inactive-members') }}" class="nav-btn {{ request()->routeIs('inactive-members') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M8 3l8 8M16 3l-8 8"/></svg>
+                INACTIVE
+            </a>
+            <a href="{{ route('claimed-members') }}" class="nav-btn {{ request()->routeIs('claimed-members') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/><path d="m8 11 2.5 2.5L16 8"/></svg>
+                CLAIMED
+            </a>
             <a href="{{ url('/users') }}" class="nav-btn {{ request()->is('users*') ? 'is-active' : '' }}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>
                 USERS
             </a>
-        @elseif ($isCollector || $isAgent)
+        @elseif ($isAgent)
             <a href="{{ url('/show-members') }}" class="nav-btn {{ request()->is('show-members*') ? 'is-active' : '' }}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>
                 SHOW MEMBERS
+            </a>
+            <a href="{{ route('inactive-members') }}" class="nav-btn {{ request()->routeIs('inactive-members') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M8 3l8 8M16 3l-8 8"/></svg>
+                INACTIVE
+            </a>
+            <a href="{{ route('claimed-members') }}" class="nav-btn {{ request()->routeIs('claimed-members') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/><path d="m8 11 2.5 2.5L16 8"/></svg>
+                CLAIMED
             </a>
         @elseif ($isManager)
-            <a href="{{ url('/payment') }}" class="nav-btn {{ request()->is('payment*') ? 'is-active' : '' }}">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg>
-                PAYMENT
-            </a>
             <a href="{{ url('/show-members') }}" class="nav-btn {{ request()->is('show-members*') ? 'is-active' : '' }}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>
                 SHOW MEMBERS
+            </a>
+            <a href="{{ route('inactive-members') }}" class="nav-btn {{ request()->routeIs('inactive-members') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M8 3l8 8M16 3l-8 8"/></svg>
+                INACTIVE
+            </a>
+            <a href="{{ route('claimed-members') }}" class="nav-btn {{ request()->routeIs('claimed-members') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/><path d="m8 11 2.5 2.5L16 8"/></svg>
+                CLAIMED
             </a>
             <a href="{{ url('/report') }}" class="nav-btn {{ request()->is('report*') ? 'is-active' : '' }}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10M7 11h6"/><path d="M9 17l3 4 3-4"/></svg>
@@ -60,18 +79,34 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>
                 SHOW MEMBERS
             </a>
+            <a href="{{ route('inactive-members') }}" class="nav-btn {{ request()->routeIs('inactive-members') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M8 3l8 8M16 3l-8 8"/></svg>
+                INACTIVE
+            </a>
+            <a href="{{ route('claimed-members') }}" class="nav-btn {{ request()->routeIs('claimed-members') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/><path d="m8 11 2.5 2.5L16 8"/></svg>
+                CLAIMED
+            </a>
+            <a href="{{ url('/report') }}" class="nav-btn {{ request()->is('report*') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="14" rx="2"/><path d="M7 7h10M7 11h6"/><path d="M9 17l3 4 3-4"/></svg>
+                REPORT
+            </a>
         @else
             <a href="{{ route('add-members.draft.staff') }}" class="nav-btn {{ request()->is('add-members*') ? 'is-active' : '' }}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>
                 ADD MEMBERS
             </a>
-            <a href="{{ url('/payment') }}" class="nav-btn {{ request()->is('payment*') ? 'is-active' : '' }}">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M7 15h3"/></svg>
-                PAYMENT
-            </a>
             <a href="{{ url('/show-members') }}" class="nav-btn {{ request()->is('show-members*') ? 'is-active' : '' }}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>
                 SHOW MEMBERS
+            </a>
+            <a href="{{ route('inactive-members') }}" class="nav-btn {{ request()->routeIs('inactive-members') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/><path d="M8 3l8 8M16 3l-8 8"/></svg>
+                INACTIVE
+            </a>
+            <a href="{{ route('claimed-members') }}" class="nav-btn {{ request()->routeIs('claimed-members') ? 'is-active' : '' }}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/><path d="m8 11 2.5 2.5L16 8"/></svg>
+                CLAIMED
             </a>
             <a href="{{ url('/users') }}" class="nav-btn {{ request()->is('users*') ? 'is-active' : '' }}">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a6.5 6.5 0 0 1 13 0"/></svg>

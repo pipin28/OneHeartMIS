@@ -4,7 +4,6 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MemberController;
 use App\Http\Controllers\PercentageController;
-use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +18,9 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 Route::get('/activity-ping', function () {
     return response()->noContent();
 })->name('activity.ping');
+Route::get('/csrf-token', function () {
+    return response()->json(['token' => csrf_token()]);
+})->name('csrf-token');
 
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 Route::get('/profile', [ProfileController::class, 'show'])->name('profile');
@@ -44,14 +46,20 @@ Route::middleware(['role:admin,encoder'])->group(function () {
 });
 
 Route::get('/show-members', [MemberController::class, 'index'])->name('show-members');
-Route::post('/members/{part2}/update', [MemberController::class, 'update'])->middleware('role:admin')->name('members.update');
-Route::delete('/members/{part2}', [MemberController::class, 'destroy'])->middleware('role:admin')->name('members.destroy');
+Route::get('/inactive-members', [MemberController::class, 'inactiveMembers'])->name('inactive-members');
+Route::get('/claimed-members', [MemberController::class, 'claimedMembers'])->name('claimed-members');
+Route::post('/members/{part2}/claim', [MemberController::class, 'claim'])->middleware('role:admin,manager,encoder')->name('members.claim');
+Route::post('/members/{part2}/inactive', [MemberController::class, 'markInactive'])->middleware('role:admin,manager,encoder')->name('members.inactive');
+Route::post('/members/{part2}/contestability', [MemberController::class, 'contestability'])->middleware('role:admin,manager,encoder')->name('members.contestability');
+Route::get('/members/{part2}/payments', [MemberController::class, 'payments'])->middleware('role:admin,manager,encoder')->name('members.payments');
+Route::post('/members/{part2}/pay-next', [MemberController::class, 'payNext'])->middleware('role:admin,manager,encoder')->name('members.pay-next');
+Route::post('/members/{part2}/payments/{payment}/redo', [MemberController::class, 'redoPayment'])->middleware('role:admin,manager')->name('members.payments.redo');
+Route::post('/members/{part2}/update', [MemberController::class, 'update'])->middleware('role:admin,manager')->name('members.update');
+Route::delete('/members/{part2}', [MemberController::class, 'destroy'])->middleware('role:admin,manager')->name('members.destroy');
 
 Route::view('/customer', 'customer')->name('customer');
 Route::view('/supplier', 'supplier')->name('supplier');
 Route::view('/purchases', 'purchases')->name('purchases');
-Route::get('/payment', [PaymentController::class, 'index'])->name('payment');
-Route::post('/payments/{payment}/pay', [PaymentController::class, 'pay'])->name('payments.pay');
 Route::middleware(['role:admin,manager'])->group(function () {
     Route::get('/settings', [PercentageController::class, 'index'])->name('settings');
     Route::post('/settings', [PercentageController::class, 'update'])->name('settings.update');
@@ -60,10 +68,13 @@ Route::middleware(['role:admin,manager'])->group(function () {
     Route::post('/settings/plan/update', [PercentageController::class, 'updatePlan'])->name('settings.plan.update');
     Route::post('/settings/percentages', [PercentageController::class, 'updatePercentages'])->name('settings.percentages.update');
     Route::post('/settings/insurance', [PercentageController::class, 'updateInsurancePartners'])->name('settings.insurance.update');
+    Route::post('/settings/branding', [PercentageController::class, 'updateBranding'])->name('settings.branding.update');
 });
 Route::middleware(['role:manager'])->group(function () {
     Route::view('/register', 'auth.register')->name('register');
     Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
+});
+Route::middleware(['role:manager,encoder'])->group(function () {
     Route::get('/report', [ReportController::class, 'index'])->name('report');
     Route::get('/report/export', [ReportController::class, 'exportCsv'])->name('report.export');
 });

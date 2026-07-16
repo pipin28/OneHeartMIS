@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
-    <title>Add Members - Beneficiaries | OneHeart Life Plan</title>
+    <link rel="icon" type="image/png" href="{{ $appBrandLogoUrl }}">
+    <title>Add Members - Beneficiaries | {{ $appBrandName }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') . '?v=' . filemtime(public_path('css/app.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/partials/nav.css') . '?v=' . filemtime(public_path('css/partials/nav.css')) }}">
     <style>
         .beneficiaries-grid {
@@ -75,10 +75,6 @@
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Staff Info</span>
                         </a>
-                        <a class="step-pill" href="{{ route('add-members.draft.enrollment') }}">
-                            <input type="radio" name="progress_step" aria-hidden="true">
-                            <span>Member Enrollment</span>
-                        </a>
                         <a class="step-pill" href="{{ route('add-members.draft.part2') }}">
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Member Details</span>
@@ -91,14 +87,14 @@
                             <input type="radio" name="progress_step" checked aria-hidden="true">
                             <span>Beneficiaries</span>
                         </a>
+                        <a class="step-pill" href="{{ route('add-members.draft.enrollment') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
                     @else
                         <a class="step-pill {{ $assignmentId ? '' : 'is-disabled' }}" href="{{ $assignmentId ? route('add-members.staff', ['assignment' => $assignmentId]) : '#' }}">
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Staff Info</span>
-                        </a>
-                        <a class="step-pill" href="{{ route('add-members.edit', ['part1' => $part1Id]) }}">
-                            <input type="radio" name="progress_step" aria-hidden="true">
-                            <span>Member Enrollment</span>
                         </a>
                         <a class="step-pill" href="{{ route('add-members.part2', ['part1' => $part1Id]) . '?part2=' . $part2Id }}">
                             <input type="radio" name="progress_step" aria-hidden="true">
@@ -112,6 +108,10 @@
                             <input type="radio" name="progress_step" checked aria-hidden="true">
                             <span>Beneficiaries</span>
                         </a>
+                        <a class="step-pill" href="{{ route('add-members.edit', ['part1' => $part1Id]) }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
                     @endif
                 </div>
                 <div class="form-actions" style="justify-content: flex-start; margin-bottom: 8px;">
@@ -119,13 +119,13 @@
                 </div>
                 <div class="eyebrow">Add Members</div>
                 <div class="hero-title hero-small">Beneficiaries</div>
-                <p class="hero-sub">Finish enrollment by adding the beneficiary information.</p>
+                
 
                 @if ($errors->any())
                     <div class="status status-error">{{ $errors->first() }}</div>
                 @endif
 
-                <form method="POST" action="{{ $isDraft ? route('add-members.draft.submit') : route('add-members.part2.beneficiaries.store', ['part1' => $part1Id, 'part2' => $part2Id]) }}" class="form-grid" id="beneficiariesForm">
+                <form method="POST" action="{{ $isDraft ? '#' : route('add-members.part2.beneficiaries.store', ['part1' => $part1Id, 'part2' => $part2Id]) }}" class="form-grid" id="beneficiariesForm">
                     @csrf
                     @if (! $isDraft)
                         <input type="hidden" name="part1_id" value="{{ $part1Id }}">
@@ -141,18 +141,14 @@
                             }
                             $oldBeneficiaries = collect($oldNames)->map(function ($_, $index) {
                                 return [
-                                    'type' => old("type.$index"),
                                     'name' => old("name.$index"),
-                                    'age' => old("age.$index"),
                                     'address' => old("address.$index"),
                                     'relationship_to_planholder' => old("relationship_to_planholder.$index"),
                                 ];
                             })->filter(fn($row) => !empty(array_filter($row)));
                             // Always start with a blank row unless re-populating validation errors
                             $rows = $oldBeneficiaries->isNotEmpty() ? $oldBeneficiaries : [[
-                                'type' => '',
                                 'name' => '',
-                                'age' => '',
                                 'address' => '',
                                 'relationship_to_planholder' => '',
                             ]];
@@ -161,21 +157,8 @@
                         @foreach ($rows as $index => $row)
                             <div class="beneficiary-card" data-beneficiary-row>
                                 <div>
-                                    <label>Type</label>
-                                    <select name="type[]" required>
-                                        @php $typeValue = $row['type'] ?? $row->type ?? '' @endphp
-                                        <option value="" disabled {{ $typeValue === '' ? 'selected' : '' }}>Select type</option>
-                                        <option value="primary beneficiaries" {{ $typeValue === 'primary beneficiaries' ? 'selected' : '' }}>Primary beneficiaries</option>
-                                        <option value="contingent beneficiaries" {{ $typeValue === 'contingent beneficiaries' ? 'selected' : '' }}>Contingent beneficiaries</option>
-                                    </select>
-                                </div>
-                                <div>
                                     <label>Name</label>
                                     <input type="text" name="name[]" value="{{ $row['name'] ?? $row->name ?? '' }}" required>
-                                </div>
-                                <div>
-                                    <label>Age</label>
-                                    <input type="number" name="age[]" value="{{ $row['age'] ?? $row->age ?? '' }}" required>
                                 </div>
                                 <div>
                                     <label>Address</label>
@@ -194,7 +177,7 @@
 
                     <div class="beneficiaries-actions">
                         <button type="button" class="button is-ghost" id="addBeneficiary">+ Add another beneficiary</button>
-                        <button type="submit">Save beneficiaries</button>
+                        <button type="submit">{{ $isDraft ? 'Next' : 'Save beneficiaries' }}</button>
                     </div>
 
                     @if (!empty($beneficiaries) && count($beneficiaries))
@@ -203,10 +186,8 @@
                             <div class="saved-beneficiaries">
                                 @foreach ($beneficiaries as $bene)
                                     <div class="beneficiary-card">
-                                        <div class="eyebrow" style="margin-bottom: 6px;">{{ $bene->type ?? '-' }}</div>
                                         <div class="hero-sub" style="margin: 0 0 8px;">{{ $bene->name ?? '-' }}</div>
                                         <ul class="modal-list" style="list-style: none; padding: 0; margin: 0; display: grid; gap: 4px;">
-                                            <li><span>Age</span> <strong>{{ $bene->age ?? '-' }}</strong></li>
                                             <li><span>Address</span> <strong>{{ $bene->address ?? '-' }}</strong></li>
                                             <li><span>Relationship</span> <strong>{{ $bene->relationship_to_planholder ?? '-' }}</strong></li>
                                         </ul>
@@ -271,20 +252,8 @@
                 wrapper.setAttribute('data-beneficiary-row', '');
                 wrapper.innerHTML = `
                     <div>
-                        <label>Type</label>
-                        <select name="type[]" required>
-                            <option value="" disabled ${values.type ? '' : 'selected'}>Select type</option>
-                            <option value="primary beneficiaries">Primary beneficiaries</option>
-                            <option value="contingent beneficiaries">Contingent beneficiaries</option>
-                        </select>
-                    </div>
-                    <div>
                         <label>Name</label>
                         <input type="text" name="name[]" required>
-                    </div>
-                    <div>
-                        <label>Age</label>
-                        <input type="number" name="age[]" required>
                     </div>
                     <div>
                         <label>Address</label>
@@ -298,14 +267,10 @@
                         <button type="button" class="button is-ghost remove-beneficiary">Remove</button>
                     </div>
                 `;
-                const typeSelect = wrapper.querySelector('select[name="type[]"]');
                 const nameInput = wrapper.querySelector('input[name="name[]"]');
-                const ageInput = wrapper.querySelector('input[name="age[]"]');
                 const addressInput = wrapper.querySelector('input[name="address[]"]');
                 const relInput = wrapper.querySelector('input[name="relationship_to_planholder[]"]');
-                if (typeSelect && values.type) typeSelect.value = values.type;
                 if (nameInput) nameInput.value = values.name || '';
-                if (ageInput) ageInput.value = values.age || '';
                 if (addressInput) addressInput.value = values.address || '';
                 if (relInput) relInput.value = values.relationship_to_planholder || '';
                 return wrapper;
@@ -347,9 +312,7 @@
             const collectBeneficiaries = () => {
                 const rows = Array.from(grid?.querySelectorAll('[data-beneficiary-row]') || []);
                 return rows.map(row => ({
-                    type: row.querySelector('select[name="type[]"]')?.value || '',
                     name: row.querySelector('input[name="name[]"]')?.value || '',
-                    age: row.querySelector('input[name="age[]"]')?.value || '',
                     address: row.querySelector('input[name="address[]"]')?.value || '',
                     relationship_to_planholder: row.querySelector('input[name="relationship_to_planholder[]"]')?.value || '',
                 })).filter(row => Object.values(row).some(v => String(v || '').trim() !== ''));
@@ -371,20 +334,8 @@
                     wrapper.setAttribute('data-beneficiary-row', '');
                     wrapper.innerHTML = `
                         <div>
-                            <label>Type</label>
-                            <select name="type[]" required>
-                                <option value="" disabled ${row.type ? '' : 'selected'}>Select type</option>
-                                <option value="primary beneficiaries">Primary beneficiaries</option>
-                                <option value="contingent beneficiaries">Contingent beneficiaries</option>
-                            </select>
-                        </div>
-                        <div>
                             <label>Name</label>
                             <input type="text" name="name[]" required>
-                        </div>
-                        <div>
-                            <label>Age</label>
-                            <input type="number" name="age[]" required>
                         </div>
                         <div>
                             <label>Address</label>
@@ -398,14 +349,10 @@
                             <button type="button" class="button is-ghost remove-beneficiary">Remove</button>
                         </div>
                     `;
-                    const typeSelect = wrapper.querySelector('select[name="type[]"]');
                     const nameInput = wrapper.querySelector('input[name="name[]"]');
-                    const ageInput = wrapper.querySelector('input[name="age[]"]');
                     const addressInput = wrapper.querySelector('input[name="address[]"]');
                     const relInput = wrapper.querySelector('input[name="relationship_to_planholder[]"]');
-                    if (typeSelect && row.type) typeSelect.value = row.type;
                     if (nameInput) nameInput.value = row.name || '';
-                    if (ageInput) ageInput.value = row.age || '';
                     if (addressInput) addressInput.value = row.address || '';
                     if (relInput) relInput.value = row.relationship_to_planholder || '';
                     grid.appendChild(wrapper);
@@ -434,38 +381,12 @@
                 });
             });
 
-            form?.addEventListener('submit', async (e) => {
+            form?.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const draft = readDraft();
                 draft.beneficiaries = collectBeneficiaries();
                 writeDraft(draft);
-                const payload = {
-                    staff: draft.staff || {},
-                    enrollment: draft.enrollment || {},
-                    member: draft.member || {},
-                    address: draft.address || {},
-                    beneficiaries: draft.beneficiaries || [],
-                };
-                const token = form?.querySelector('input[name="_token"]')?.value || '';
-                try {
-                    const response = await fetch("{{ route('add-members.draft.submit') }}", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                            "Accept": "application/json",
-                            "X-CSRF-TOKEN": token,
-                        },
-                        body: JSON.stringify(payload),
-                    });
-                    const data = await response.json().catch(() => ({}));
-                    if (!response.ok) {
-                        throw new Error(data?.message || "Save failed.");
-                    }
-                    localStorage.removeItem(DRAFT_KEY);
-                    window.location.href = data.redirect || "{{ route('payment') }}";
-                } catch (err) {
-                    alert(err.message || "Save failed.");
-                }
+                window.location.href = "{{ route('add-members.draft.enrollment') }}";
             });
 
             loadBeneficiaries();
@@ -473,5 +394,4 @@
     </script>
 </body>
 </html>
-
 

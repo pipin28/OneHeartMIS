@@ -15,15 +15,9 @@ class StorePart1Request extends FormRequest
     {
         return [
             'member_assignment_id' => ['required', 'integer', 'exists:member_assignments,id'],
-            'lpaf_no' => ['required', 'integer'],
             'application_date' => ['required', 'date'],
-            'sales_counselor_code' => ['required', 'string', 'max:255'],
-            'plan_type' => ['required', 'string', 'max:255'],
-            'gross_contact_price' => ['required', 'integer'],
+            'approved_date' => ['required', 'date'],
             'mode_of_payment' => ['required', 'string', 'max:255'],
-            'terms_of_payment' => ['required', 'string', 'max:255'],
-            'due_date' => ['required', 'date'],
-            'amount' => ['required', 'integer'],
         ];
     }
 }

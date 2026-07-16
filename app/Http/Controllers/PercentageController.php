@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Redirect;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 
 class PercentageController extends Controller
 {
@@ -14,7 +16,6 @@ class PercentageController extends Controller
     public function index()
     {
         $defaults = [
-            'collector' => 10, // percent
             'agent' => 5,
             'manager' => 5,
             'others' => 10,
@@ -23,6 +24,9 @@ class PercentageController extends Controller
         $plans = $this->loadPlanSettings();
         $percentages = $this->loadPercentageSettings();
         $insurancePartners = $this->loadInsurancePartners();
+        $registrationFee = $this->loadRegistrationFee();
+        $renewalFee = $this->loadSystemFee('renewal_fee', $registrationFee);
+        $contestabilityFee = $this->loadSystemFee('contestability_fee', 0);
 
         return view('settings', [
             'payments' => collect(), // intentionally empty; calculator is manual
@@ -30,6 +34,9 @@ class PercentageController extends Controller
             'plans' => $plans,
             'percentages' => $percentages,
             'insurancePartners' => $insurancePartners,
+            'registrationFee' => $registrationFee,
+            'renewalFee' => $renewalFee,
+            'contestabilityFee' => $contestabilityFee,
         ]);
     }
 
@@ -38,47 +45,54 @@ class PercentageController extends Controller
         $data = $request->validate([
             'plans' => ['required', 'array'],
             'plans.*.contract_amount' => ['required', 'integer', 'min:0'],
-            'plans.*.legacy_monthly_amount' => ['nullable', 'integer', 'min:0'],
-            'plans.*.default_mode' => ['required', 'string', 'max:50'],
-            'plans.*.default_terms' => ['required', 'string', 'max:255'],
-            'plans.*.default_months' => ['required', 'integer', 'min:1'],
+            'registration_fee' => ['required', 'integer', 'min:0'],
+            'renewal_fee' => ['required', 'integer', 'min:0'],
+            'contestability_fee' => ['required', 'integer', 'min:0'],
         ]);
 
         DB::transaction(function () use ($data) {
             foreach ($data['plans'] as $name => $meta) {
                 $contract = (int) ($meta['contract_amount'] ?? 0);
-                $legacyMonthlyAmount = isset($meta['legacy_monthly_amount']) && $meta['legacy_monthly_amount'] !== ''
-                    ? (int) $meta['legacy_monthly_amount']
-                    : null;
-                $months = max(1, (int) $meta['default_months']);
-                $mode = strtolower(trim((string) ($meta['default_mode'] ?? 'monthly')));
-                $factor = match ($mode) {
-                    'quarterly' => 3,
-                    'semi-annual', 'semi annual' => 6,
-                    'annual', 'yearly' => 12,
-                    'one-time', 'one time', 'one_time' => $months,
-                    default => 1,
-                };
-                $premium = $mode === 'one-time' || $mode === 'one time' || $mode === 'one_time'
-                    ? $contract
-                    : (int) round(($contract / $months) * $factor);
                 DB::table('plan_settings')->updateOrInsert(
                     ['name' => $name],
                     [
                         'contract_amount' => $contract,
-                        'legacy_monthly_amount' => $legacyMonthlyAmount,
-                        'premium_amount' => $premium,
-                        'default_mode' => $meta['default_mode'],
-                        'default_terms' => $meta['default_terms'],
-                        'default_months' => $months,
+                        'legacy_monthly_amount' => null,
+                        'premium_amount' => $contract,
+                        'default_mode' => 'Monthly',
+                        'default_terms' => 'Monthly',
+                        'default_months' => 1,
                         'updated_at' => now(),
                         'created_at' => now(),
                     ]
                 );
             }
+
+            foreach (['registration_fee', 'renewal_fee', 'contestability_fee'] as $key) {
+                DB::table('system_settings')->updateOrInsert(
+                    ['key' => $key],
+                    [
+                        'value' => (string) (int) $data[$key],
+                        'updated_at' => now(),
+                        'created_at' => now(),
+                    ]
+                );
+            }
+
+            if (Schema::hasTable('payments') && Schema::hasTable('part1s')) {
+                DB::table('payments')
+                    ->join('part1s', 'part1s.id', '=', 'payments.part1_id')
+                    ->where('payments.payment_type', 'registration_renewal')
+                    ->whereIn('payments.status', ['pending', 'overdue'])
+                    ->whereColumn('payments.due_date', '>', 'part1s.application_date')
+                    ->update([
+                        'payments.amount' => (int) $data['renewal_fee'],
+                        'payments.updated_at' => now(),
+                    ]);
+            }
         });
 
-        return Redirect::route('settings')->with('status', 'Plan settings updated.');
+        return Redirect::route('settings')->with('status', 'Age category settings updated.');
     }
 
     public function storePlan(Request $request)
@@ -186,7 +200,7 @@ class PercentageController extends Controller
             'mode' => ['nullable', 'string', 'max:50'],
         ]);
 
-        $roles = ['collector', 'agent', 'manager', 'others'];
+        $roles = ['agent', 'manager', 'others'];
         $allModes = ['Monthly', 'Quarterly', 'Semi-Annual', 'Annual'];
         $modes = $data['mode'] && in_array($data['mode'], $allModes, true) ? [$data['mode']] : $allModes;
         $tiersByMode = [
@@ -280,33 +294,79 @@ class PercentageController extends Controller
         return Redirect::route('settings')->with('status', 'Insurance partners updated.');
     }
 
+    public function updateBranding(Request $request)
+    {
+        $data = $request->validate([
+            'company_name' => ['required', 'string', 'max:255'],
+            'company_logo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+        ]);
+
+        $existing = DB::table('branding_settings')->first();
+        $logoPath = (string) ($existing->logo_path ?? '');
+
+        if ($request->hasFile('company_logo')) {
+            $file = $request->file('company_logo');
+            $extension = strtolower((string) $file->getClientOriginalExtension());
+            $filename = 'company-logo-' . now()->format('YmdHis') . '-' . substr(md5((string) microtime(true)), 0, 8) . '.' . $extension;
+            $targetDir = public_path('uploads/branding');
+
+            if (! File::exists($targetDir)) {
+                File::makeDirectory($targetDir, 0755, true);
+            }
+
+            $file->move($targetDir, $filename);
+            $newPath = 'uploads/branding/' . $filename;
+
+            if ($logoPath !== '' && str_starts_with($logoPath, 'uploads/branding/')) {
+                $oldFile = public_path($logoPath);
+                if (File::exists($oldFile)) {
+                    File::delete($oldFile);
+                }
+            }
+
+            $logoPath = $newPath;
+        }
+
+        DB::table('branding_settings')->updateOrInsert(
+            ['id' => 1],
+            [
+                'company_name' => trim((string) $data['company_name']),
+                'logo_path' => $logoPath !== '' ? $logoPath : null,
+                'updated_at' => now(),
+                'created_at' => now(),
+            ]
+        );
+
+        return Redirect::route('settings')->with('status', 'Branding updated.');
+    }
+
     private function loadPlanSettings(): array
     {
         $rows = DB::table('plan_settings')->orderBy('id')->get();
         if ($rows->isEmpty()) {
             return [
-                'Serenity Care' => [
-                    'contract_amount' => 30000,
-                    'legacy_monthly_amount' => null,
-                    'premium_amount' => 500,
+                'Age 60 to 65' => [
+                    'contract_amount' => 100,
                     'default_mode' => 'Monthly',
-                    'default_terms' => '60 months (5 years)',
-                    'default_months' => 60,
+                    'default_terms' => 'Monthly',
+                    'default_months' => 1,
                 ],
-                'Everlasting Care' => [
-                    'contract_amount' => 20000,
-                    'legacy_monthly_amount' => null,
-                    'premium_amount' => 350,
+                'Age 66 to 70' => [
+                    'contract_amount' => 120,
                     'default_mode' => 'Monthly',
-                    'default_terms' => '60 months (5 years)',
-                    'default_months' => 60,
+                    'default_terms' => 'Monthly',
+                    'default_months' => 1,
                 ],
-                'Legacy Care' => [
-                    'contract_amount' => 30000,
-                    'legacy_monthly_amount' => 0,
-                    'premium_amount' => 0,
-                    'default_mode' => 'One-time',
-                    'default_terms' => 'Infinite',
+                'Age 71 to 80' => [
+                    'contract_amount' => 150,
+                    'default_mode' => 'Monthly',
+                    'default_terms' => 'Monthly',
+                    'default_months' => 1,
+                ],
+                'Age 81 above' => [
+                    'contract_amount' => 200,
+                    'default_mode' => 'Monthly',
+                    'default_terms' => 'Monthly',
                     'default_months' => 1,
                 ],
             ];
@@ -325,6 +385,20 @@ class PercentageController extends Controller
         }
 
         return $plans;
+    }
+
+    private function loadRegistrationFee(): int
+    {
+        return $this->loadSystemFee('registration_fee', 300);
+    }
+
+    private function loadSystemFee(string $key, int $fallback): int
+    {
+        if (! Schema::hasTable('system_settings')) {
+            return $fallback;
+        }
+
+        return max(0, (int) (DB::table('system_settings')->where('key', $key)->value('value') ?? $fallback));
     }
 
     private function loadPercentageSettings(): array

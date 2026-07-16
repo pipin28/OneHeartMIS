@@ -16,15 +16,12 @@ class StoreAddressRequest extends FormRequest
         return [
             'part1_id' => ['required', 'integer'],
             'part2_id' => ['required', 'integer'],
-            'lot_house_numer' => ['required', 'string', 'max:255'],
-            'street' => ['required', 'string', 'max:255'],
-            'barangay' => ['required', 'string', 'max:255'],
-            'province' => ['required', 'string', 'max:255'],
-            'zip_code' => ['required', 'string', 'max:255'],
+            'complete_address' => ['required', 'string', 'max:1000'],
             'contact_no' => ['required', 'string', 'max:255'],
-            'sss_gsis_no' => ['required', 'string', 'max:255'],
-            'tin_no' => ['required', 'string', 'max:255'],
-            'source_of_funds_if_not_imployed' => ['required', 'string', 'max:255'],
+            'religion' => ['required', 'string', 'max:255'],
+            'occupation_livelihood' => ['required', 'string', 'max:255'],
+            'valid_id' => ['required', 'string', 'max:255'],
+            'valid_id_no' => ['required', 'string', 'max:255'],
         ];
     }
 }

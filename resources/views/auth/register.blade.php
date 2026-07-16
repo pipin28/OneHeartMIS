@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
-    <title>Register | OneHeart Life Plan</title>
+    <link rel="icon" type="image/png" href="{{ $appBrandLogoUrl }}">
+    <title>Register | {{ $appBrandName }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') . '?v=' . filemtime(public_path('css/app.css')) }}">
 </head>
 <body class="auth-smoke">
     <div class="frame frame-auth">
@@ -34,7 +34,7 @@
                         <label for="role">Role</label>
                         <select id="role" name="role" required>
                             <option value="" disabled {{ old('role') ? '' : 'selected' }}>Select role</option>
-                            @foreach (['encoder' => 'Encoder', 'admin' => 'Admin', 'collector' => 'Collector', 'agent' => 'Agent', 'manager' => 'Manager'] as $value => $label)
+                            @foreach (['encoder' => 'Encoder', 'admin' => 'Admin', 'agent' => 'Agent', 'manager' => 'Manager'] as $value => $label)
                                 <option value="{{ $value }}" {{ old('role') === $value ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
@@ -53,6 +53,30 @@
             </div>
         </div>
     </div>
+    <div class="status-modal {{ session('status') ? 'is-visible' : '' }}" id="registerSuccessModal" data-message="{{ session('status') }}">
+        <div class="status-card">
+            <div class="status-title">Registered successfully!</div>
+            <p class="status-body">{{ session('status') }}</p>
+            <button type="button" class="status-close" aria-label="Close">Close</button>
+        </div>
+    </div>
+    <script>
+        (() => {
+            const modal = document.getElementById('registerSuccessModal');
+            const closeBtn = modal?.querySelector('.status-close');
+            const closeModal = () => modal?.classList.remove('is-visible');
+
+            if (modal && modal.dataset.message) {
+                modal.classList.add('is-visible');
+                closeBtn?.addEventListener('click', closeModal);
+                modal.addEventListener('click', (event) => {
+                    if (event.target === modal) closeModal();
+                });
+            } else {
+                modal?.classList.remove('is-visible');
+            }
+        })();
+    </script>
 </body>
 </html>
 

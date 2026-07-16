@@ -3,11 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
-    <title>Add Members | OneHeart Life Plan</title>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/png" href="{{ $appBrandLogoUrl }}">
+    <title>Add Members | {{ $appBrandName }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') . '?v=' . filemtime(public_path('css/app.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/partials/nav.css') . '?v=' . filemtime(public_path('css/partials/nav.css')) }}">
 </head>
 @php
@@ -34,10 +35,6 @@
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Staff Info</span>
                         </a>
-                        <a class="step-pill is-current" href="#">
-                            <input type="radio" name="progress_step" checked aria-hidden="true">
-                            <span>Member Enrollment</span>
-                        </a>
                         <a class="step-pill" href="{{ route('add-members.draft.part2') }}">
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Member Details</span>
@@ -50,14 +47,14 @@
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Beneficiaries</span>
                         </a>
+                        <a class="step-pill is-current" href="#">
+                            <input type="radio" name="progress_step" checked aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
                     @else
                         <a class="step-pill" href="{{ route('add-members.staff', ['assignment' => $assignmentId]) }}">
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Staff Info</span>
-                        </a>
-                        <a class="step-pill is-current" href="#">
-                            <input type="radio" name="progress_step" checked aria-hidden="true">
-                            <span>Member Enrollment</span>
                         </a>
                         <a class="step-pill is-disabled" href="#">
                             <input type="radio" name="progress_step" aria-hidden="true">
@@ -71,18 +68,23 @@
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Beneficiaries</span>
                         </a>
+                        <a class="step-pill is-current" href="#">
+                            <input type="radio" name="progress_step" checked aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
                     @endif
                 </div>
                 <div class="eyebrow">Add Members</div>
                 <div class="hero-title hero-small">Member enrollment</div>
-                <p class="hero-sub">Use this screen to onboard new members. Drop in your forms, uploads, and validation messages here.</p>
+
 
                 @if ($assignment)
                     <div class="status" style="margin-bottom: 16px;">
-                        <strong>Collector:</strong> {{ $assignment->collector_name }} |
+                        <strong>Unit:</strong> {{ $assignment->unit_name ?? '-' }} |
                         <strong>Agent:</strong> {{ $assignment->agent_name }} |
-                        <strong>Manager:</strong> {{ $assignment->manager_name }}
-                        <a href="{{ route('add-members.staff', ['assignment' => $assignment->id]) }}" class="button is-ghost" style="margin-left: 12px;">Edit staff info</a>
+                        <strong>Unit Manager:</strong> {{ $assignment->manager_name }} |
+                        <strong>Sales Associate:</strong> {{ $assignment->sales_associate ?? '-' }} |
+                        <strong>Contact:</strong> {{ $assignment->staff_contact ?? '-' }}
                     </div>
                 @endif
 
@@ -98,53 +100,36 @@
                         <input type="number" id="user_id" name="user_id" value="{{ old('user_id', $part1->user_id ?? $nextUserId ?? '') }}" placeholder="123" readonly>
                     </div>
                     <div>
-                        <label for="lpaf_no">LPAF No.</label>
-                        <input type="number" id="lpaf_no" name="lpaf_no" value="{{ old('lpaf_no', $part1->lpaf_no ?? '') }}" placeholder="10001" required>
+                        <label for="added_by">Added By</label>
+                        <input type="text" id="added_by" value="{{ $addedByUser->name ?? auth()->user()->name ?? '-' }}" readonly>
                     </div>
                     <div>
                         <label for="application_date">Application Date</label>
                         <input type="date" id="application_date" name="application_date" value="{{ old('application_date', $part1->application_date ?? \Carbon\Carbon::now()->toDateString()) }}" required>
                     </div>
                     <div>
-<!--  -->                        <label for="sales_counselor_code">Sales Counselor Code</label>
-                        <input type="text" id="sales_counselor_code" name="sales_counselor_code" value="{{ old('sales_counselor_code', $part1->sales_counselor_code ?? '') }}" placeholder="SC-009" required>
+                        <label for="approved_date">Approved Date</label>
+                        <input type="date" id="approved_date" name="approved_date" value="{{ old('approved_date', $part1->approved_date ?? \Carbon\Carbon::now()->toDateString()) }}" required>
                     </div>
                     <div>
-                        <label for="plan_type">Plan / Service</label>
-                        <select id="plan_type" name="plan_type" required>
-                            <option value="" disabled {{ old('plan_type', $part1->plan_type ?? '') === null ? 'selected' : '' }}>Select a plan</option>
-                            @foreach ($planSettings as $value => $meta)
-                                <option value="{{ $value }}" {{ old('plan_type', $part1->plan_type ?? '') === $value ? 'selected' : '' }}>{{ $value }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div>
-                        <label for="gross_contact_price">Gross Contract Price</label>
-                        <input type="text" id="gross_contact_price" name="gross_contact_price" value="{{ old('gross_contact_price', $part1->gross_contact_price ?? '') }}" placeholder="30,000" inputmode="decimal" autocomplete="off" readonly required>
-                    </div>
-                    <div>
-                        <label for="mode_of_payment">Mode of Payment</label>
+                        <label for="mode_of_payment">Contribution</label>
                         <select id="mode_of_payment" name="mode_of_payment" required>
                             <option value="" disabled {{ old('mode_of_payment', $part1->mode_of_payment ?? '') === null ? 'selected' : '' }}>Select an option</option>
-                            @foreach (['Monthly', 'Quarterly', 'Semi-Annual', 'Annual', 'One-time'] as $option)
+                            @foreach (['Monthly', 'Quarterly', 'Semi-Annual', 'Annual'] as $option)
                                 <option value="{{ $option }}" {{ old('mode_of_payment', $part1->mode_of_payment ?? '') === $option ? 'selected' : '' }}>{{ $option }}</option>
                             @endforeach
                         </select>
                     </div>
                     <div>
-                        <label for="terms_of_payment">Terms of Payment</label>
-                        <input type="text" id="terms_of_payment" name="terms_of_payment" value="{{ old('terms_of_payment', $part1->terms_of_payment ?? '') }}" readonly required>
-                    </div>
-                    <div>
-                        <label for="due_date">Due Date</label>
-                        <input type="date" id="due_date" name="due_date" value="{{ old('due_date', $part1->due_date ?? \Carbon\Carbon::now()->addYears(5)->toDateString()) }}" required>
+                        <label for="registration_fee">Registration Fee</label>
+                        <input type="text" id="registration_fee" value="{{ number_format((float) ($registrationFee ?? 300), 2) }}" readonly>
                     </div>
                     <div>
                         <label for="amount">Amount</label>
-                        <input type="text" id="amount" name="amount" value="{{ old('amount', $part1->amount ?? '') }}" placeholder="15,000" inputmode="decimal" autocomplete="off" required>
+                        <input type="text" id="amount" value="{{ old('amount', isset($part1->amount) && (float) $part1->amount > 0 ? number_format((float) $part1->amount, 2) : '') }}" placeholder="Based on member age" readonly>
                     </div>
                     <div class="form-actions">
-                        <button type="submit">{{ $isDraft ? 'Next' : 'Save & next' }}</button>
+                        <button type="submit">{{ $isDraft ? 'Save member' : 'Save & next' }}</button>
                     </div>
                 </form>
 
@@ -157,10 +142,10 @@
                                     <thead>
                                         <tr>
                                             <th>User ID</th>
-                                            <th>LPAF No.</th>
                                             <th>Application Date</th>
-                                            <th>Plan Type</th>
-                                            <th>Mode</th>
+                                            <th>Approved Date</th>
+                                            <th>Age Category</th>
+                                            <th>Contribution</th>
                                             <th>Amount</th>
                                         </tr>
                                     </thead>
@@ -168,8 +153,8 @@
                                         @foreach ($members as $member)
                                             <tr>
                                                 <td>{{ $member->user_id }}</td>
-                                                <td>{{ $member->lpaf_no }}</td>
                                                 <td>{{ $member->application_date }}</td>
+                                                <td>{{ $member->approved_date }}</td>
                                                 <td>{{ $member->plan_type }}</td>
                                                 <td>{{ $member->mode_of_payment }}</td>
                                                 <td>{{ number_format($member->amount, 2) }}</td>
@@ -290,10 +275,85 @@
                 writeDraft(draft);
             };
 
-            form?.addEventListener('submit', (e) => {
+            const currentCsrfToken = () => form?.querySelector('input[name="_token"]')?.value
+                || document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+                || '';
+
+            const setCsrfToken = (token) => {
+                if (!token) return;
+                const input = form?.querySelector('input[name="_token"]');
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                if (input) input.value = token;
+                if (meta) meta.setAttribute('content', token);
+            };
+
+            const refreshCsrfToken = async () => {
+                const response = await fetch("{{ route('csrf-token') }}", {
+                    method: "GET",
+                    credentials: "same-origin",
+                    headers: {
+                        "Accept": "application/json",
+                        "X-Requested-With": "XMLHttpRequest",
+                    },
+                });
+
+                if (response.status === 401 || response.redirected) {
+                    window.location.href = "{{ route('login') }}";
+                    throw new Error("Session expired. Please log in again.");
+                }
+
+                if (!response.ok) {
+                    throw new Error("Could not refresh the security token.");
+                }
+
+                const data = await response.json();
+                setCsrfToken(data.token);
+
+                return data.token || '';
+            };
+
+            const submitDraft = (payload, token) => fetch("{{ route('add-members.draft.submit') }}", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "X-CSRF-TOKEN": token,
+                    "X-Requested-With": "XMLHttpRequest",
+                },
+                body: JSON.stringify({ _token: token, ...payload }),
+            });
+
+            form?.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 saveDraft();
-                window.location.href = "{{ route('add-members.draft.part2') }}";
+                const draft = readDraft();
+                const payload = {
+                    staff: draft.staff || {},
+                    enrollment: draft.enrollment || {},
+                    member: draft.member || {},
+                    address: draft.address || {},
+                    beneficiaries: draft.beneficiaries || [],
+                };
+
+                try {
+                    let token = currentCsrfToken();
+                    let response = await submitDraft(payload, token);
+
+                    if (response.status === 419) {
+                        token = await refreshCsrfToken();
+                        response = await submitDraft(payload, token);
+                    }
+
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(data?.message || "Save failed.");
+                    }
+                    localStorage.removeItem(DRAFT_KEY);
+                    window.location.href = data.redirect || "{{ route('show-members') }}";
+                } catch (err) {
+                    alert(err.message || "Save failed.");
+                }
             });
 
             document.querySelectorAll('.progress-steps a').forEach(link => {
@@ -308,146 +368,72 @@
             fillForm();
         })();
         (() => {
-            const planField = document.getElementById('plan_type');
-            const grossField = document.getElementById('gross_contact_price');
-            const modeField = document.getElementById('mode_of_payment');
-            const termsField = document.getElementById('terms_of_payment');
             const amountField = document.getElementById('amount');
-            const dueField = document.getElementById('due_date');
-            const form = document.querySelector('form.form-grid');
+            const modeField = document.getElementById('mode_of_payment');
+            if (!amountField) return;
 
-           
-            const stripCommas = (value) => (value || '').toString().replace(/,/g, '');
-            const parseNumber = (value) => {
-                const cleaned = stripCommas(value).replace(/[^0-9.]/g, '');
-                const num = Number(cleaned);
-                return Number.isFinite(num) ? num : 0;
-            };
             const formatNumber = (value) => {
                 if (value === '' || value === null || value === undefined) return '';
                 const num = Number(value);
                 if (!Number.isFinite(num)) return '';
-                return num.toLocaleString('en-US', { maximumFractionDigits: 2 });
+                return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
-
-            const termsByMode = {
-                Monthly: '60 months',
-                Quarterly: '20 quarters',
-                'Semi-Annual': '10 simi annual',
-                Annual: '5 years',
-                'One-time': 'Infinite',
+            const normalizeMode = (mode) => {
+                const value = String(mode || '').trim().toLowerCase();
+                if (value === 'semi annual') return 'semi-annual';
+                if (value === 'yearly') return 'annual';
+                return value;
             };
-
-            const populateTerms = (mode) => {
-                if (!termsField) return;
-                termsField.value = termsByMode[mode] || '';
-            };
-
-            const parsePayments = (terms, mode) => {
-                const parsed = parseInt((terms || '').split(' ')[0], 10);
-                if (Number.isFinite(parsed) && parsed > 0) return parsed;
-                return (mode || '').toLowerCase() === 'one-time' ? 1 : 0;
-            };
-
-            const calcAmount = (plan, mode, terms, grossOverride) => {
-                const meta = plans[plan] || {};
-                return Number(grossOverride || meta.contract_amount || 0);
-            };
-
-            const hydrate = (plan) => {
-                const meta = plans[plan];
-                if (!meta) return;
-
-                const isLegacy = plan === 'Legacy Care';
-
-                if (grossField && (!grossField.value || grossField.dataset.autofill !== 'false')) {
-                    grossField.value = formatNumber(meta.contract_amount);
+            const multiplierForMode = (mode) => {
+                switch (normalizeMode(mode)) {
+                    case 'quarterly':
+                        return 3;
+                    case 'semi-annual':
+                        return 6;
+                    case 'annual':
+                        return 12;
+                    default:
+                        return 1;
                 }
-
-                if (modeField) {
-                    modeField.disabled = false;
-                    modeField.dataset.locked = isLegacy ? 'true' : 'false';
-                    modeField.classList.toggle('is-locked', isLegacy);
-                    if (isLegacy) {
-                        modeField.value = 'One-time';
-                    } else if (!modeField.value) {
-                        modeField.value = meta.default_mode;
+            };
+            const amountByCategory = Object.entries(plans).reduce((carry, [category, meta]) => {
+                carry[category] = Number(meta.contract_amount || 0);
+                return carry;
+            }, {});
+            const categoryForAge = (age) => {
+                const value = Number(age || 0);
+                if (value >= 81) return 'Age 81 above';
+                if (value >= 71) return 'Age 71 to 80';
+                if (value >= 66) return 'Age 66 to 70';
+                if (value >= 60) return 'Age 60 to 65';
+                return '';
+            };
+            let baseAmount = Number(String(amountField.value || '').replace(/,/g, '')) || 0;
+            const setAmount = (amount) => {
+                baseAmount = Number(amount || 0);
+                amountField.value = baseAmount > 0
+                    ? formatNumber(baseAmount * multiplierForMode(modeField?.value))
+                    : '';
+            };
+            const hydrateFromDraftAge = () => {
+                try {
+                    const draft = JSON.parse(localStorage.getItem("oneheart_member_draft_v1")) || {};
+                    const category = categoryForAge(draft.member?.age);
+                    if (category && amountByCategory[category] !== undefined) {
+                        setAmount(amountByCategory[category]);
                     }
-                }
-
-                if (termsField) {
-                    termsField.readOnly = true;
-                    if (isLegacy) {
-                        populateTerms('One-time');
-                    } else {
-                        populateTerms(modeField?.value || meta.default_mode);
-                    }
-                }
-
-                if (dueField) {
-                    dueField.disabled = false;
-                    dueField.required = true;
-                    if (!dueField.value) {
-                        const fiveYears = new Date();
-                        fiveYears.setFullYear(fiveYears.getFullYear() + 5);
-                        dueField.value = fiveYears.toISOString().slice(0, 10);
-                    }
-                }
-                if (amountField && (!amountField.value || amountField.dataset.autofill !== 'false')) {
-                    const amt = calcAmount(
-                        plan,
-                        modeField?.value || meta.default_mode,
-                        termsField?.value || meta.default_terms,
-                        parseNumber(grossField?.value || meta.contract_amount)
-                    );
-                    amountField.value = formatNumber(amt);
-                }
-            };
-
-            planField?.addEventListener('change', (e) => {
-                hydrate(e.target.value);
-            });
-
-            modeField?.addEventListener('change', () => {
-                if (modeField.dataset.locked === 'true') {
-                    modeField.value = 'One-time';
-                    populateTerms('One-time');
+                } catch {
                     return;
                 }
-                if (!planField?.value) return;
-                if (!amountField) return;
-                populateTerms(modeField.value);
-                const amt = calcAmount(planField.value, modeField.value, termsField?.value || '', parseNumber(grossField?.value || 0));
-                amountField.value = formatNumber(amt);
-            });
+            };
 
-            grossField?.addEventListener('input', () => {
-                if (!planField?.value || !amountField) return;
-                const amt = calcAmount(planField.value, modeField?.value || '', termsField?.value || '', parseNumber(grossField?.value || 0));
-                amountField.value = formatNumber(amt);
-            });
-
-            termsField?.addEventListener('change', () => {
-                if (!planField?.value || !amountField) return;
-                const amt = calcAmount(planField.value, modeField?.value || '', termsField?.value || '', parseNumber(grossField?.value || 0));
-                amountField.value = formatNumber(amt);
-            });
-
-            if (planField?.value) {
-                hydrate(planField.value);
-            } else if (modeField?.value) {
-                populateTerms(modeField.value);
+            if (amountField.value) {
+                setAmount(baseAmount);
+            } else {
+                hydrateFromDraftAge();
             }
-
-            if (grossField?.value) grossField.value = formatNumber(parseNumber(grossField.value));
-            if (amountField?.value) amountField.value = formatNumber(parseNumber(amountField.value));
-
-            form?.addEventListener('submit', () => {
-                if (grossField) grossField.value = stripCommas(grossField.value);
-                if (amountField) amountField.value = stripCommas(amountField.value);
-            });
+            modeField?.addEventListener('change', () => setAmount(baseAmount));
         })();
     </script>
 </body>
 </html>
-

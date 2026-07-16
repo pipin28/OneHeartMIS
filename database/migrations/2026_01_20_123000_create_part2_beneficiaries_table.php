@@ -13,9 +13,7 @@ return new class extends Migration
             $table->unsignedBigInteger('part1_id');
             $table->unsignedBigInteger('part2_id');
             $table->unsignedBigInteger('par2_residential_address_id')->nullable();
-            $table->string('type');
             $table->string('name');
-            $table->integer('age');
             $table->string('address');
             $table->string('relationship_to_planholder');
             $table->timestamps();

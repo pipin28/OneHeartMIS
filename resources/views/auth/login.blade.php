@@ -3,18 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
-    <title>Login | OneHeart Life Plan</title>
+    <link rel="icon" type="image/png" href="{{ $appBrandLogoUrl }}">
+    <title>Login | {{ $appBrandName }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') . '?v=' . filemtime(public_path('css/app.css')) }}">
     <style>
         .login-logo {
             max-width: 180px;
             height: auto;
-            animation: logoBeat 1.35s ease-in-out infinite;
-            transform-origin: center;
-            will-change: transform, filter;
         }
 
         .login-logo-title {
@@ -63,24 +60,6 @@
             height: 18px;
         }
 
-        @keyframes logoBeat {
-            0%, 100% {
-                transform: scale(1);
-                filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0.12));
-            }
-            20% {
-                transform: scale(1.06);
-                filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.18));
-            }
-            36% {
-                transform: scale(0.98);
-                filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.12));
-            }
-            52% {
-                transform: scale(1.04);
-                filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.15));
-            }
-        }
     </style>
 </head>
 <body class="auth-smoke {{ $errors->any() ? 'has-auth-error' : '' }}">
@@ -88,8 +67,8 @@
         <div class="grid">
             <div class="panel form-panel">
                 <div style="text-align: center; margin-bottom: 16px;">
-                    <img src="{{ asset('images/logo-oneheart.png') }}" alt="OneHeart Logo" class="login-logo">
-                    <div class="login-logo-title">ONE HEART MIS</div>
+                    <img src="{{ $appBrandLogoUrl }}" alt="{{ $appBrandName }} logo" class="login-logo">
+                    <div class="login-logo-title">{{ strtoupper($appBrandName) }}</div>
                 </div>
                 <form method="POST" action="{{ route('login.submit') }}">
                     @csrf
@@ -118,14 +97,13 @@
                     <div class="actions">
                         <label class="remember">
                             <input type="checkbox" name="remember" class="checkbox-accent">
-                            Remember my focus
+                            Remember me
                         </label>
                         <a href="#" class="link-accent link-small">Forgot?</a>
                     </div>
                     <button type="submit">Sign in and continue</button>
                 </form>
-                <p class="foot">No account yet? <a class="link-accent" href="{{ route('register') }}">Create one here</a></p>
-            </div>
+               
         </div>
     </div>
     <script>

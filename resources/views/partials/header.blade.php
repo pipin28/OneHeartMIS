@@ -1,7 +1,8 @@
 <header class="site-header">
-    <div class="brand">OneHeart Life Plan</div>
-
-    @include('partials.nav')
+    <div class="brand">
+        <img src="{{ $appBrandLogoUrl }}" alt="{{ $appBrandName }} logo" class="brand-logo">
+        <span>{{ $appBrandName }}</span>
+    </div>
 
     @php
         $role = auth()->user()->role ?? null;
@@ -9,26 +10,30 @@
         $canOpenRegister = $role === 'manager';
     @endphp
 
-    <nav class="nav-links">
-        <div class="profile-menu" id="profileMenu">
-            <button type="button" class="profile-trigger" id="profileMenuTrigger" aria-expanded="false" aria-haspopup="true" aria-label="Open profile menu">
-                <span class="profile-name">{{ auth()->user()->name ?? 'Account' }}</span>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="m6 9 6 6 6-6"></path>
-                </svg>
-            </button>
-            <div class="profile-dropdown" id="profileDropdown" aria-hidden="true">
-                <a href="{{ route('profile') }}" class="profile-dropdown-item">Profile</a>
-                @if ($canOpenSettings)
-                    <a href="{{ route('settings') }}" class="profile-dropdown-item">Settings</a>
-                @endif
-                @if ($canOpenRegister)
-                    <a href="{{ route('register') }}" class="profile-dropdown-item">Register</a>
-                @endif
-                <button type="button" class="profile-dropdown-item profile-dropdown-logout" id="openLogoutModal">Logout</button>
+    <div class="header-right">
+        @include('partials.nav')
+
+        <nav class="nav-links">
+            <div class="profile-menu" id="profileMenu">
+                <button type="button" class="profile-trigger" id="profileMenuTrigger" aria-expanded="false" aria-haspopup="true" aria-label="Open profile menu">
+                    <span class="profile-name">{{ auth()->user()->name ?? 'Account' }}</span>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m6 9 6 6 6-6"></path>
+                    </svg>
+                </button>
+                <div class="profile-dropdown" id="profileDropdown" aria-hidden="true">
+                    <a href="{{ route('profile') }}" class="profile-dropdown-item">Profile</a>
+                    @if ($canOpenSettings)
+                        <a href="{{ route('settings') }}" class="profile-dropdown-item">Settings</a>
+                    @endif
+                    @if ($canOpenRegister)
+                        <a href="{{ route('register') }}" class="profile-dropdown-item">Register</a>
+                    @endif
+                    <button type="button" class="profile-dropdown-item profile-dropdown-logout" id="openLogoutModal">Logout</button>
+                </div>
             </div>
-        </div>
-    </nav>
+        </nav>
+    </div>
 </header>
 
 <div class="modal-overlay" id="logoutConfirmModal" aria-hidden="true">

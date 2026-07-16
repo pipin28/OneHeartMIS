@@ -85,7 +85,7 @@ class DashboardController extends Controller
         $query = DB::table('part1s');
         $scopeLabel = 'All records';
 
-        if (in_array($role, ['collector', 'agent', 'manager'], true)) {
+        if (in_array($role, ['agent', 'manager'], true)) {
             $column = $role . '_user_id';
             $assignmentIds = DB::table('member_assignments')
                 ->where($column, $userId)

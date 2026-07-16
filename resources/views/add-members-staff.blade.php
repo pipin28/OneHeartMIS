@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
-    <title>Add Members - Staff Info | OneHeart Life Plan</title>
+    <link rel="icon" type="image/png" href="{{ $appBrandLogoUrl }}">
+    <title>Add Members - Staff Info | {{ $appBrandName }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') . '?v=' . filemtime(public_path('css/app.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/partials/nav.css') . '?v=' . filemtime(public_path('css/partials/nav.css')) }}">
 </head>
 @php
@@ -28,10 +28,6 @@
                             <input type="radio" name="progress_step" checked aria-hidden="true">
                             <span>Staff Info</span>
                         </a>
-                        <a class="step-pill" href="{{ route('add-members.draft.enrollment') }}">
-                            <input type="radio" name="progress_step" aria-hidden="true">
-                            <span>Member Enrollment</span>
-                        </a>
                         <a class="step-pill" href="{{ route('add-members.draft.part2') }}">
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Member Details</span>
@@ -44,14 +40,14 @@
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Beneficiaries</span>
                         </a>
+                        <a class="step-pill" href="{{ route('add-members.draft.enrollment') }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
                     @else
                         <a class="step-pill is-current" href="#">
                             <input type="radio" name="progress_step" checked aria-hidden="true">
                             <span>Staff Info</span>
-                        </a>
-                        <a class="step-pill {{ $assignmentId ? '' : 'is-disabled' }}" href="{{ $assignmentId ? route('add-members', ['assignment' => $assignmentId]) : '#' }}">
-                            <input type="radio" name="progress_step" aria-hidden="true">
-                            <span>Member Enrollment</span>
                         </a>
                         <a class="step-pill is-disabled" href="#">
                             <input type="radio" name="progress_step" aria-hidden="true">
@@ -65,11 +61,15 @@
                             <input type="radio" name="progress_step" aria-hidden="true">
                             <span>Beneficiaries</span>
                         </a>
+                        <a class="step-pill {{ $assignmentId ? '' : 'is-disabled' }}" href="{{ $assignmentId ? route('add-members', ['assignment' => $assignmentId]) : '#' }}">
+                            <input type="radio" name="progress_step" aria-hidden="true">
+                            <span>Member Enrollment</span>
+                        </a>
                     @endif
                 </div>
                 <div class="eyebrow">Add Members</div>
-                <div class="hero-title hero-small">Collector, agent, manager</div>
-                <p class="hero-sub">Select the staff accounts before starting member enrollment.</p>
+                <div class="hero-title hero-small">Staff information</div>
+
 
                 @if (session('status'))
                     <div class="status">{{ session('status') }}</div>
@@ -82,15 +82,8 @@
                     @csrf
                     <input type="hidden" name="assignment_id" value="{{ $assignmentId }}">
                     <div>
-                        <label for="collector_user_id">Collector</label>
-                        <select id="collector_user_id" name="collector_user_id" required>
-                            <option value="" disabled {{ old('collector_user_id', $assignment->collector_user_id ?? '') ? '' : 'selected' }}>Select collector</option>
-                            @foreach ($collectors ?? [] as $user)
-                                <option value="{{ $user->id }}" {{ (string) old('collector_user_id', $assignment->collector_user_id ?? '') === (string) $user->id ? 'selected' : '' }}>
-                                    {{ $user->name }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <label for="unit_name">Unit Name</label>
+                        <input type="text" id="unit_name" name="unit_name" value="{{ old('unit_name', $assignment->unit_name ?? '') }}" placeholder="Unit name" required>
                     </div>
                     <div>
                         <label for="agent_user_id">Agent</label>
@@ -104,15 +97,23 @@
                         </select>
                     </div>
                     <div>
-                        <label for="manager_user_id">Manager</label>
+                        <label for="manager_user_id">Unit Manager</label>
                         <select id="manager_user_id" name="manager_user_id" required>
-                            <option value="" disabled {{ old('manager_user_id', $assignment->manager_user_id ?? '') ? '' : 'selected' }}>Select manager</option>
+                            <option value="" disabled {{ old('manager_user_id', $assignment->manager_user_id ?? '') ? '' : 'selected' }}>Select unit manager</option>
                             @foreach ($managers ?? [] as $user)
                                 <option value="{{ $user->id }}" {{ (string) old('manager_user_id', $assignment->manager_user_id ?? '') === (string) $user->id ? 'selected' : '' }}>
                                     {{ $user->name }}
                                 </option>
                             @endforeach
                         </select>
+                    </div>
+                    <div>
+                        <label for="sales_associate">Sales Associate</label>
+                        <input type="text" id="sales_associate" name="sales_associate" value="{{ old('sales_associate', $assignment->sales_associate ?? '') }}" placeholder="Sales associate" required>
+                    </div>
+                    <div>
+                        <label for="staff_contact">Contact</label>
+                        <input type="text" id="staff_contact" name="staff_contact" value="{{ old('staff_contact', $assignment->staff_contact ?? '') }}" placeholder="Contact number" required>
                     </div>
                     <div class="form-actions">
                         <button type="submit">{{ $isDraft ? 'Next' : 'Save & next' }}</button>
@@ -181,7 +182,7 @@
             form?.addEventListener('submit', (e) => {
                 e.preventDefault();
                 saveDraft();
-                window.location.href = "{{ route('add-members.draft.enrollment') }}";
+                window.location.href = "{{ route('add-members.draft.part2') }}";
             });
 
             document.querySelectorAll('.progress-steps a').forEach(link => {
@@ -198,4 +199,3 @@
     </script>
 </body>
 </html>
-

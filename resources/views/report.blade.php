@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
-    <title>Report | OneHeart Life Plan</title>
+    <link rel="icon" type="image/png" href="{{ $appBrandLogoUrl }}">
+    <title>Reports & Analytics | {{ $appBrandName }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') . '?v=' . filemtime(public_path('css/app.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/partials/nav.css') . '?v=' . filemtime(public_path('css/partials/nav.css')) }}">
 </head>
 <body class="has-shell">
@@ -15,305 +15,150 @@
         @include('partials.header')
 
         <main class="dashboard">
-            <section class="wrap">
-                <div class="eyebrow">Report</div>
-                <div class="hero-title hero-small">Reports &amp; analytics</div>
-                <p class="hero-sub">Collection, outstanding, aging, staff performance, and export-ready rows.</p>
-
-                <form method="GET" action="{{ route('report') }}" class="form-actions report-filters">
-                    <div class="button-group members-mode-group" role="group" aria-label="Quick date presets">
-                        <a class="button is-ghost member-mode-filter {{ ($preset ?? 'month') === 'today' ? 'is-active' : '' }}" href="{{ route('report', ['preset' => 'today']) }}">Today</a>
-                        <a class="button is-ghost member-mode-filter {{ ($preset ?? 'month') === 'week' ? 'is-active' : '' }}" href="{{ route('report', ['preset' => 'week']) }}">This Week</a>
-                        <a class="button is-ghost member-mode-filter {{ ($preset ?? 'month') === 'month' ? 'is-active' : '' }}" href="{{ route('report', ['preset' => 'month']) }}">This Month</a>
+            <section class="wrap daily-report">
+                <div class="report-head">
+                    <div>
+                        <div class="eyebrow">Daily Report</div>
+                        <div class="hero-title hero-small">Cash detail report</div>
+                        <p class="hero-sub">Paid collections for {{ $reportDateLabel }}.</p>
                     </div>
-                    <label>
-                        <span>From</span>
-                        <input type="date" name="start_date" value="{{ $startDate ?? '' }}">
-                    </label>
-                    <label>
-                        <span>To</span>
-                        <input type="date" name="end_date" value="{{ $endDate ?? '' }}">
-                    </label>
-                    <button type="submit" class="button">Apply</button>
-                    <a href="{{ $csvUrl }}" class="button is-warning">Export CSV</a>
-                    <button type="button" class="button is-ghost" onclick="window.print()">Print (PDF)</button>
-                </form>
+                    <form method="GET" action="{{ route('report') }}" class="report-date-filter">
+                        <label>
+                            <span>Date</span>
+                            <input type="date" name="date" value="{{ $reportDate }}">
+                        </label>
+                        <button type="submit" class="button">Apply</button>
+                        <button type="button" class="button is-ghost" onclick="window.print()">Print</button>
+                    </form>
+                </div>
 
                 <div class="table-stats report-meta">
-                    <span class="stat-pill soft">Range: <strong>{{ $startDate }} to {{ $endDate }}</strong></span>
-                    <span class="stat-pill soft">Scope: <strong>{{ $scopeLabel ?? 'Role-based' }}</strong></span>
+                    <span class="stat-pill soft">Scope: <strong>{{ $scopeLabel }}</strong></span>
                     <span class="stat-pill soft">Last updated: <strong>{{ $lastUpdated }}</strong></span>
                 </div>
 
                 <div class="report-status-grid">
                     <article class="status-card">
-                        <div class="label">Net Collection</div>
-                        <div class="value">{{ number_format((float) ($summary['collection_net'] ?? 0), 2) }}</div>
-                        <div class="trend neutral">Gross {{ number_format((float) ($summary['collection_gross'] ?? 0), 2) }}</div>
+                        <div class="label">Gross Collection</div>
+                        <div class="value">PHP {{ number_format((float) $summary['gross'], 2) }}</div>
+                        <div class="trend neutral">{{ number_format((int) $summary['transactions']) }} transactions</div>
                     </article>
                     <article class="status-card">
                         <div class="label">Deductions</div>
-                        <div class="value">{{ number_format((float) ($summary['collection_deductions'] ?? 0), 2) }}</div>
-                        <div class="trend neutral">Insurance + percentages</div>
+                        <div class="value">PHP {{ number_format((float) $summary['deductions'], 2) }}</div>
+                        <div class="trend neutral">Insurance and percentages</div>
                     </article>
                     <article class="status-card">
-                        <div class="label">Outstanding</div>
-                        <div class="value">{{ number_format((float) ($summary['outstanding'] ?? 0), 2) }}</div>
-                        <div class="trend warning">Pending + overdue as of today</div>
-                    </article>
-                    <article class="status-card">
-                        <div class="label">Collection Efficiency</div>
-                        <div class="value">{{ number_format((float) ($summary['collection_efficiency'] ?? 0), 2) }}%</div>
-                        <div class="trend neutral">{{ (int) ($summary['paid_count'] ?? 0) }} paid of {{ (int) ($summary['due_count'] ?? 0) }} due</div>
-                    </article>
-                    <article class="status-card">
-                        <div class="label">Paid Amount (Due Range)</div>
-                        <div class="value">{{ number_format((float) ($summary['paid_amount_due_range'] ?? 0), 2) }}</div>
-                        <div class="trend positive">Payments marked paid</div>
-                    </article>
-                    <article class="status-card">
-                        <div class="label">Unpaid Amount (Due Range)</div>
-                        <div class="value">{{ number_format((float) ($summary['unpaid_amount_due_range'] ?? 0), 2) }}</div>
-                        <div class="trend warning">Needs collection follow-up</div>
-                    </article>
-                    <article class="status-card">
-                        <div class="label">Members In Scope</div>
-                        <div class="value">{{ number_format((int) ($summary['members_count'] ?? 0)) }}</div>
-                        <div class="trend neutral">Filtered by role scope</div>
+                        <div class="label">Net Collection</div>
+                        <div class="value">PHP {{ number_format((float) $summary['net'], 2) }}</div>
+                        <div class="trend positive">After deductions</div>
                     </article>
                 </div>
 
-                <div class="dashboard-grid report-grid">
-                    <article class="card chart-card wide">
-                        <div class="card-head">
-                            <div>
-                                <div class="card-eyebrow">Collection Trend</div>
-                                <h3>{{ $trend['bucket'] ?? 'Daily' }} net collection</h3>
-                            </div>
-                            <span class="chip chip-neutral">Max {{ number_format((float) ($trend['max'] ?? 0), 2) }}</span>
-                        </div>
-                        @if (empty($trend['series']) || collect($trend['series'])->every(fn($x) => (float) ($x['value'] ?? 0) <= 0))
-                            <div class="empty-state">
-                                <div class="empty-title">No paid data in selected range</div>
-                            </div>
-                        @else
-                            <div class="trend-bars">
-                                @foreach (($trend['series'] ?? []) as $point)
-                                    @php
-                                        $max = max((float) ($trend['max'] ?? 0), 1);
-                                        $value = (float) ($point['value'] ?? 0);
-                                        $height = max(6, (int) round(($value / $max) * 120));
-                                    @endphp
-                                    <div class="trend-bar-wrap" title="{{ $point['label'] }}: {{ number_format($value, 2) }}">
-                                        <div class="trend-bar" style="height: {{ $height }}px"></div>
-                                        <div class="trend-bar-label">{{ $point['label'] }}</div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        @endif
-                    </article>
-
-                    <article class="card">
-                        <div class="card-head">
-                            <div>
-                                <div class="card-eyebrow">Aging</div>
-                                <h3>Overdue buckets</h3>
-                            </div>
-                        </div>
-                        <table class="data-table compact">
-                            <tbody>
-                                <tr><th>1-30 days</th><td class="text-right">{{ number_format((float) ($aging['1_30'] ?? 0), 2) }}</td></tr>
-                                <tr><th>31-60 days</th><td class="text-right">{{ number_format((float) ($aging['31_60'] ?? 0), 2) }}</td></tr>
-                                <tr><th>61+ days</th><td class="text-right">{{ number_format((float) ($aging['61_plus'] ?? 0), 2) }}</td></tr>
-                            </tbody>
-                        </table>
-                    </article>
-
-                    <article class="card">
-                        <div class="card-head">
-                            <div>
-                                <div class="card-eyebrow">Deductions</div>
-                                <h3>Insurance and role %</h3>
-                            </div>
-                        </div>
-                        <table class="data-table compact">
-                            <tbody>
-                                <tr><th>Insurance total</th><td class="text-right">{{ number_format((float) ($deductionSummary['insurance_total'] ?? 0), 2) }}</td></tr>
-                                <tr><th>Collector %</th><td class="text-right">{{ number_format((float) ($deductionSummary['roles']['collector'] ?? 0), 2) }}</td></tr>
-                                <tr><th>Agent %</th><td class="text-right">{{ number_format((float) ($deductionSummary['roles']['agent'] ?? 0), 2) }}</td></tr>
-                                <tr><th>Manager %</th><td class="text-right">{{ number_format((float) ($deductionSummary['roles']['manager'] ?? 0), 2) }}</td></tr>
-                                <tr><th>Others %</th><td class="text-right">{{ number_format((float) ($deductionSummary['roles']['others'] ?? 0), 2) }}</td></tr>
-                            </tbody>
-                        </table>
-                    </article>
-                </div>
-
-                <div class="card">
-                    <div class="card-header table-toolbar">
+                <article class="card report-card report-subscriber-card">
+                    <div class="card-head">
                         <div>
-                            <div class="card-title">Plan type performance</div>
-                            <div class="card-subtitle">Members, collected, and outstanding by plan</div>
+                            <div class="card-eyebrow">Subscribers</div>
+                            <h3>Members by contribution mode</h3>
+                        </div>
+                    </div>
+                    <div class="subscriber-mode-grid">
+                        @foreach ($subscriberModes as $mode)
+                            <div class="subscriber-mode-item">
+                                <span>{{ $mode['label'] }}</span>
+                                <strong>{{ number_format((int) $mode['count']) }}</strong>
+                            </div>
+                        @endforeach
+                    </div>
+                </article>
+
+                <article class="card report-card report-summary-card">
+                    <div class="card-head">
+                        <div>
+                            <div class="card-eyebrow">Daily Summary</div>
+                            <h3>Collections by type</h3>
                         </div>
                     </div>
                     <div class="table-scroll">
                         <table class="data-table modern compact">
                             <thead>
                                 <tr>
-                                    <th>Plan Type</th>
-                                    <th class="text-right">Members</th>
-                                    <th class="text-right">Collected</th>
-                                    <th class="text-right">Outstanding</th>
+                                    <th>Type</th>
+                                    <th class="text-right">Count</th>
+                                    <th class="text-right">Gross</th>
+                                    <th class="text-right">Deductions</th>
+                                    <th class="text-right">Net</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse ($planBreakdown as $row)
+                                @forelse ($typeTotals as $row)
                                     <tr>
-                                        <td>{{ $row['plan'] }}</td>
-                                        <td class="text-right">{{ number_format((int) $row['members']) }}</td>
-                                        <td class="text-right">{{ number_format((float) $row['collected'], 2) }}</td>
-                                        <td class="text-right">{{ number_format((float) $row['outstanding'], 2) }}</td>
+                                        <td>{{ $row['type'] }}</td>
+                                        <td class="text-right">{{ number_format((int) $row['count']) }}</td>
+                                        <td class="text-right">PHP {{ number_format((float) $row['gross'], 2) }}</td>
+                                        <td class="text-right">PHP {{ number_format((float) $row['deductions'], 2) }}</td>
+                                        <td class="text-right">PHP {{ number_format((float) $row['net'], 2) }}</td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="4" class="muted">No data.</td></tr>
+                                    <tr><td colspan="5" class="muted text-center">No paid collections for this date.</td></tr>
                                 @endforelse
                             </tbody>
                         </table>
                     </div>
-                </div>
+                </article>
 
-                <div class="dashboard-grid report-grid">
-                    <article class="card">
-                        <div class="card-head">
-                            <div>
-                                <div class="card-eyebrow">Mode Mix</div>
-                                <h3>Payment mode distribution</h3>
-                            </div>
-                        </div>
-                        <div class="table-scroll">
-                            <table class="data-table modern compact">
-                                <thead>
-                                    <tr>
-                                        <th>Mode</th>
-                                        <th class="text-right">Members</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse ($modeBreakdown as $row)
-                                        <tr>
-                                            <td>{{ $row['mode'] }}</td>
-                                            <td class="text-right">{{ number_format((int) $row['count']) }}</td>
-                                        </tr>
-                                    @empty
-                                        <tr><td colspan="2" class="muted">No data.</td></tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </article>
-
-                    <article class="card">
-                        <div class="card-head">
-                            <div>
-                                <div class="card-eyebrow">Top Unpaid</div>
-                                <h3>Highest unpaid members</h3>
-                            </div>
-                        </div>
-                        <div class="table-scroll">
-                            <table class="data-table modern compact">
-                                <thead>
-                                    <tr>
-                                        <th>Member</th>
-                                        <th>Plan</th>
-                                        <th class="text-right">Unpaid</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse ($topUnpaidMembers as $row)
-                                        <tr>
-                                            <td>{{ $row['member'] }}</td>
-                                            <td>{{ $row['plan'] }}</td>
-                                            <td class="text-right">{{ number_format((float) $row['unpaid'], 2) }}</td>
-                                        </tr>
-                                    @empty
-                                        <tr><td colspan="3" class="muted">No unpaid balances.</td></tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </article>
-                </div>
-
-                <div class="card">
+                <article class="card report-card report-detail-card">
                     <div class="card-header table-toolbar">
                         <div>
-                            <div class="card-title">Upcoming due (next 30 days)</div>
-                            <div class="card-subtitle">Prioritize collections due in 7 days first</div>
+                            <div class="card-title">Cash Detail Report</div>
+                            <div class="card-subtitle">Daily paid transactions only</div>
                         </div>
                     </div>
                     <div class="table-scroll">
                         <table class="data-table modern compact">
                             <thead>
                                 <tr>
+                                    <th>Time</th>
                                     <th>Member</th>
+                                    <th>Added By</th>
+                                    <th>Reference No.</th>
+                                    <th>Payment Ref.</th>
+                                    <th>Type</th>
                                     <th>Plan</th>
-                                    <th>Due Date</th>
-                                    <th>Window</th>
-                                    <th class="text-right">Amount</th>
+                                    <th class="text-right">Gross</th>
+                                    <th class="text-right">Deductions</th>
+                                    <th class="text-right">Net</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @forelse ($upcomingDue as $row)
+                                @forelse ($detailRows as $row)
                                     <tr>
+                                        <td>{{ $row['time'] }}</td>
                                         <td>{{ $row['member'] }}</td>
-                                        <td>{{ $row['plan'] }}</td>
-                                        <td>{{ $row['due_date'] }}</td>
-                                        <td><span class="chip {{ $row['window'] === 'Next 7 days' ? 'chip-warning' : 'chip-neutral' }}">{{ $row['window'] }}</span></td>
-                                        <td class="text-right">{{ number_format((float) $row['amount'], 2) }}</td>
+                                        <td>{{ $row['added_by'] }}</td>
+                                        <td>{{ $row['reference_number'] }}</td>
+                                        <td>{{ $row['payment_reference'] }}</td>
+                                        <td>{{ $row['payment_type'] }}</td>
+                                        <td>{{ $row['plan_type'] }}</td>
+                                        <td class="text-right">PHP {{ number_format((float) $row['gross'], 2) }}</td>
+                                        <td class="text-right">PHP {{ number_format((float) $row['deductions'], 2) }}</td>
+                                        <td class="text-right">PHP {{ number_format((float) $row['net'], 2) }}</td>
                                     </tr>
                                 @empty
-                                    <tr><td colspan="5" class="muted">No upcoming dues.</td></tr>
+                                    <tr><td colspan="10" class="muted text-center">No paid collections for this date.</td></tr>
                                 @endforelse
                             </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="7">Total</th>
+                                    <th class="text-right">PHP {{ number_format((float) $summary['gross'], 2) }}</th>
+                                    <th class="text-right">PHP {{ number_format((float) $summary['deductions'], 2) }}</th>
+                                    <th class="text-right">PHP {{ number_format((float) $summary['net'], 2) }}</th>
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
-                </div>
-
-                <div class="dashboard-grid report-grid">
-                    @foreach (['collector' => 'Collector', 'agent' => 'Agent', 'manager' => 'Manager'] as $key => $label)
-                        <article class="card">
-                            <div class="card-head">
-                                <div>
-                                    <div class="card-eyebrow">Staff Performance</div>
-                                    <h3>{{ $label }} leaderboard</h3>
-                                </div>
-                            </div>
-                            <div class="table-scroll">
-                                <table class="data-table modern compact">
-                                    <thead>
-                                        <tr>
-                                            <th>Name</th>
-                                            <th class="text-right">Members</th>
-                                            <th class="text-right">Collected</th>
-                                            <th class="text-right">Overdue Rate</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse (($staffPerformance[$key] ?? collect()) as $row)
-                                            <tr>
-                                                <td>{{ $row['name'] }}</td>
-                                                <td class="text-right">{{ number_format((int) $row['members']) }}</td>
-                                                <td class="text-right">{{ number_format((float) $row['collected'], 2) }}</td>
-                                                <td class="text-right">{{ number_format((float) $row['overdue_rate'], 2) }}%</td>
-                                            </tr>
-                                        @empty
-                                            <tr><td colspan="4" class="muted">No staff data.</td></tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </article>
-                    @endforeach
-                </div>
+                </article>
             </section>
         </main>
 
@@ -321,20 +166,28 @@
     </div>
 
     <style>
-        .report-filters {
-            margin-top: 20px;
-            justify-content: flex-start;
-            gap: 10px;
+        .daily-report {
+            display: block;
+        }
+        .report-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            align-items: flex-start;
+        }
+        .report-date-filter {
+            display: flex;
             align-items: end;
+            gap: 10px;
             flex-wrap: wrap;
         }
-        .report-filters label {
+        .report-date-filter label {
             margin: 0;
             font-size: 12px;
             font-weight: 700;
             color: var(--muted);
         }
-        .report-filters input[type="date"] {
+        .report-date-filter input[type="date"] {
             min-height: 38px;
             border-radius: 10px;
             border: 1px solid rgba(0, 0, 0, 0.12);
@@ -342,74 +195,246 @@
             padding: 8px 10px;
             font-family: inherit;
         }
-        .report-meta {
-            margin-top: 10px;
+        .report-meta,
+        .report-card {
+            margin-top: 16px;
         }
         .report-status-grid {
             margin-top: 18px;
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
             gap: 12px;
         }
-        .report-grid {
-            margin-top: 16px;
+        .subscriber-mode-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
         }
-        .trend-bars {
-            display: flex;
-            align-items: flex-end;
-            gap: 6px;
-            min-height: 180px;
-            padding: 8px 0 0;
-            overflow-x: auto;
+        .subscriber-mode-item {
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 10px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.72);
         }
-        .trend-bar-wrap {
-            min-width: 28px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-        }
-        .trend-bar {
-            width: 100%;
-            border-radius: 8px 8px 0 0;
-            background: linear-gradient(180deg, #ffb347, #ff9f1c);
-        }
-        .trend-bar-label {
-            font-size: 11px;
+        .subscriber-mode-item span {
+            display: block;
             color: var(--muted);
-            writing-mode: vertical-rl;
-            transform: rotate(180deg);
-            max-height: 70px;
-            overflow: hidden;
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+        .subscriber-mode-item strong {
+            display: block;
+            margin-top: 6px;
+            font-size: 28px;
+            color: var(--text);
+        }
+        .data-table tfoot th {
+            border-top: 1px solid rgba(0, 0, 0, 0.12);
+            font-weight: 800;
+        }
+        @media (max-width: 900px) {
+            .report-head {
+                display: block;
+            }
+            .report-date-filter {
+                margin-top: 14px;
+            }
         }
         @media print {
+            @page {
+                size: landscape;
+                margin: 10mm;
+            }
+            * {
+                box-shadow: none !important;
+                text-shadow: none !important;
+            }
             .site-header,
             .site-footer,
-            .report-filters,
-            .members-mode-group {
+            .report-date-filter {
                 display: none !important;
             }
+            html,
             body.has-shell {
+                width: auto;
                 padding: 0;
                 background: #fff;
+                color: #000;
+                font-size: 11px;
             }
             .page {
+                display: block;
                 padding-top: 0;
                 gap: 0;
                 min-height: 0;
             }
-            .wrap {
-                border: none;
-                box-shadow: none;
-                border-radius: 0;
-                padding: 16px;
+            .dashboard,
+            .wrap,
+            .daily-report {
+                display: block;
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                padding: 0;
             }
+            .report-head {
+                display: block;
+                margin-bottom: 10px;
+            }
+            .report-meta {
+                display: block;
+                margin: 6px 0 10px;
+            }
+            .stat-pill {
+                display: inline-block;
+                margin-right: 8px;
+                padding: 0;
+                border: 0;
+                background: transparent;
+                color: #000;
+                font-size: 10px;
+            }
+            .eyebrow {
+                font-size: 10px;
+                color: #000;
+                letter-spacing: 0;
+            }
+            .hero-title.hero-small {
+                margin: 0;
+                font-size: 18px;
+                line-height: 1.2;
+                color: #000;
+            }
+            .hero-sub {
+                margin: 3px 0 0;
+                color: #000;
+                font-size: 11px;
+            }
+            .wrap,
             .card,
             .status-card {
+                box-shadow: none;
+            }
+            .report-status-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+                margin: 8px 0 10px;
+            }
+            .status-card {
+                display: block;
+                padding: 6px;
+                border: 1px solid #333;
+                border-radius: 0;
+                background: #fff;
                 break-inside: avoid;
+            }
+            .status-card .label,
+            .status-card .trend {
+                color: #000;
+                font-size: 9px;
+            }
+            .status-card .value {
+                margin: 2px 0;
+                color: #000;
+                font-size: 13px;
+                font-weight: 700;
+            }
+            .report-card,
+            .report-detail-card,
+            .report-subscriber-card,
+            .report-summary-card {
+                display: block;
+                margin: 0 0 10px;
+                padding: 0;
+                border: 0;
+                border-radius: 0;
+                background: #fff;
+                break-inside: avoid;
+            }
+            .card-head,
+            .report-detail-card .card-header {
+                display: block;
+                margin: 0 0 5px;
+                padding: 0;
+                border: 0;
+            }
+            .card-eyebrow {
+                color: #000;
+                font-size: 9px;
+            }
+            .card-head h3,
+            .card-title {
+                margin: 0;
+                color: #000;
+                font-size: 12px;
+                font-weight: 700;
+            }
+            .card-subtitle {
+                color: #000;
+                font-size: 9px;
+            }
+            .subscriber-mode-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+            }
+            .subscriber-mode-item {
+                padding: 5px;
+                border: 1px solid #333;
+                border-radius: 0;
+                background: #fff;
+            }
+            .subscriber-mode-item span {
+                color: #000;
+                font-size: 9px;
+            }
+            .subscriber-mode-item strong {
+                margin-top: 2px;
+                color: #000;
+                font-size: 13px;
+                font-weight: 700;
+            }
+            .table-scroll {
+                overflow: visible !important;
+                width: 100%;
+            }
+            .data-table,
+            .data-table.modern,
+            .data-table.compact {
+                width: 100% !important;
+                min-width: 0 !important;
+                border-collapse: collapse !important;
+                table-layout: auto;
+                background: #fff;
+                color: #000;
+                font-size: 9px;
+            }
+            .data-table th,
+            .data-table td,
+            .data-table.compact th,
+            .data-table.compact td {
+                padding: 4px 5px !important;
+                border: 1px solid #333 !important;
+                background: #fff !important;
+                color: #000 !important;
+                white-space: normal;
+                vertical-align: top;
+            }
+            .data-table thead th {
+                font-weight: 700;
+                text-align: left;
+            }
+            .data-table .text-right,
+            .text-right {
+                text-align: right !important;
+            }
+            .data-table tfoot th {
+                font-weight: 700;
+                border-top: 1px solid #333 !important;
             }
         }
     </style>
 </body>
 </html>
-

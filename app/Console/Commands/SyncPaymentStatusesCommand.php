@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\PaymentLifecycleService;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -32,31 +33,8 @@ class SyncPaymentStatusesCommand extends Command
                 'updated_at' => now(),
             ]);
 
-        $summary = DB::table('payments')
-            ->select(
-                'part1_id',
-                DB::raw('COUNT(*) as total'),
-                DB::raw("SUM(CASE WHEN status = 'paid' THEN 1 ELSE 0 END) as paid_count"),
-                DB::raw("SUM(CASE WHEN status = 'overdue' THEN 1 ELSE 0 END) as overdue_count")
-            )
-            ->groupBy('part1_id')
-            ->get();
-
-        foreach ($summary as $row) {
-            $nextStatus = 'pending';
-            if ((int) $row->total > 0 && (int) $row->paid_count === (int) $row->total) {
-                $nextStatus = 'paid';
-            } elseif ((int) $row->overdue_count > 0) {
-                $nextStatus = 'overdue';
-            }
-
-            DB::table('part1s')
-                ->where('id', $row->part1_id)
-                ->update([
-                    'payment_status' => $nextStatus,
-                    'updated_at' => now(),
-                ]);
-        }
+        $part1Ids = DB::table('payments')->distinct()->pluck('part1_id');
+        app(PaymentLifecycleService::class)->sync($part1Ids);
 
         $this->info("Updated to overdue: $toOverdue");
         $this->info("Updated to pending: $toPending");

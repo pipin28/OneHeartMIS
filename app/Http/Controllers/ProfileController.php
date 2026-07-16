@@ -22,7 +22,6 @@ class ProfileController extends Controller
         ];
 
         $roleColumn = match ($role) {
-            'collector' => 'collector_user_id',
             'agent' => 'agent_user_id',
             'manager' => 'manager_user_id',
             default => null,

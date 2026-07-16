@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="{{ asset('images/logo-oneheart.png') }}">
-    <title>Dashboard | OneHeart Life Plan</title>
+    <link rel="icon" type="image/png" href="{{ $appBrandLogoUrl }}">
+    <title>Dashboard | {{ $appBrandName }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=manrope:400,600,700" rel="stylesheet" />
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/app.css') . '?v=' . filemtime(public_path('css/app.css')) }}">
     <link rel="stylesheet" href="{{ asset('css/partials/nav.css') . '?v=' . filemtime(public_path('css/partials/nav.css')) }}">
 </head>
 <body class="has-shell" data-show-welcome="{{ session('status') ? '1' : '0' }}" data-user-name="{{ auth()->user()->name ?? '' }}">
@@ -16,16 +16,13 @@
 
         <main class="dashboard">
             <section class="wrap dashboard-hero">
-                <div class="dashboard-brand">
-                    <img src="{{ asset('images/logo-oneheart.png') }}" alt="OneHeart Life Plan logo" class="dashboard-brand-logo">
-                    <div class="dashboard-brand-text">OneHeart Life Plan</div>
-                </div>
+                
                 <div class="hero-meta">
                     <span class="eyebrow">System overview</span>
                     <span class="pill">Live data</span>
                 </div>
-                <div class="hero-title">OneHeart Control Center</div>
-                <p class="hero-sub">Role-scoped summary of collections, receivables, and upcoming due accounts.</p>
+                <div class="hero-title">{{ $appBrandName }} Control Center</div>
+
                 <div class="table-stats">
                     <span class="stat-pill soft">Scope: <strong>{{ $scopeLabel ?? 'Role-based' }}</strong></span>
                     <span class="stat-pill soft">Last updated: <strong>{{ $lastUpdated ?? now()->format('M d, Y h:i A') }}</strong></span>
@@ -101,7 +98,6 @@
                             <div class="card-eyebrow">Activity</div>
                             <h3>Recent paid transactions (this month)</h3>
                         </div>
-                        <a href="{{ route('payment') }}" class="link-accent">Open payment</a>
                     </div>
                     <div class="table-scroll">
                         <table class="data-table modern compact">
@@ -349,4 +345,3 @@
     </script>
 </body>
 </html>
-
